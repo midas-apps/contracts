@@ -63,6 +63,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     await sendAndWaitForTimelockedTxSign(hre, await populate(), {
       action: 'update-pause-manager',
       comment: `set ${name} delay to ${target}`,
+      changes: [{ field: `pauseManager.${name}Delay`, current, target }],
     });
   }
 };

@@ -249,10 +249,19 @@ export const grantAllProductRoles = async (
         })),
       );
 
+  const roleNames = Object.entries({ ...allRoles.common, ...tokenRoles });
+  const roleName = (role: string) =>
+    roleNames.find(([, hash]) => hash === role)?.[0] ?? role;
+
   await sendAndWaitForCustomTxSign(hre, grantTx, {
     action: 'update-ac',
     subAction: 'grant-token-roles',
     comment: `grant all ${token} roles`,
+    changes: rolesToGrant.map((role, i) => ({
+      field: `ac.hasRole[${roleName(role)}][${addressesToGrant[i]}]`,
+      current: false,
+      target: true,
+    })),
   });
 };
 
@@ -358,6 +367,13 @@ export const grantV2NetworkRoles = async (hre: HardhatRuntimeEnvironment) => {
       {
         action: 'update-ac',
         comment: `grant ${name} role to ${account}`,
+        changes: [
+          {
+            field: `ac.hasRole[${name}][${account}]`,
+            current: false,
+            target: true,
+          },
+        ],
       },
     );
   }
@@ -415,6 +431,13 @@ export const grantV2NetworkRoles = async (hre: HardhatRuntimeEnvironment) => {
     {
       action: 'update-ac',
       comment: `grant timelock executor permission to ${timelockExecutorAddress}`,
+      changes: [
+        {
+          field: `ac.hasFunctionPermission[timelockManager.executeTimelockOperation][${timelockExecutorAddress}]`,
+          current: false,
+          target: true,
+        },
+      ],
     },
   );
 };

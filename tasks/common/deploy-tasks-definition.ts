@@ -3,6 +3,7 @@ import path from 'node:path';
 import {
   actionParam,
   aggregatorTypeParam,
+  dryRunParam,
   feedTargetParam,
   keysParam,
   mTokenParam,
@@ -132,6 +133,9 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
   // Post-deploy
   'deploy:post:wire:ac': [deployPost('wire_AccessControl')],
   'deploy:post:set:pause-delays': [deployPost('set_PauseDelays')],
+  'deploy:post:set:network-settings': [deployPost('set_NetworkSettings')],
+  // params are passed to the script in this order: (hre, dryRun)
+  'deploy:post:sync:network': [deployPost('sync_Network'), dryRunParam()],
   'deploy:post:add:ptokens': [
     deployPost('add_PaymentTokens'),
     mTokenParam(),
@@ -167,6 +171,10 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
     mTokenParam(true),
     pTokenParam(true),
     aggregatorTypeParam(true),
+  ],
+  'deploy:post:set:feed-settings': [
+    deployPost('set_FeedSettings'),
+    mTokenParam(),
   ],
   'deploy:post:set:waived': [
     deployPost('add_FeeWaived'),
@@ -215,6 +223,18 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
   ],
 
   // v2 only
+  // params are passed to the script in this order: (hre, mToken, dryRun)
+  'deploy:post:sync': [
+    deployPost('sync_MToken'),
+    mTokenParam(),
+    dryRunParam(),
+    v2VaultsOnlyParam(),
+  ],
+  'deploy:post:set:vaultsettings': [
+    deployPost('set_VaultSettings'),
+    mTokenParam(),
+    v2VaultsOnlyParam(),
+  ],
   'deploy:post:set:instantlimits': [
     deployPost('set_InstantLimits'),
     mTokenParam(),

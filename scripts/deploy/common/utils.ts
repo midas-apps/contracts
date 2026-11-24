@@ -9,6 +9,8 @@ import {
 } from 'ethers';
 import { EIP1193Provider, HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import { AsyncLocalStorage } from 'node:async_hooks';
+
 import { DeploymentConfig } from './types';
 
 import { MTokenName } from '../../../config';
@@ -328,6 +330,13 @@ export const getWalletAddressForAction = async (
   return await customSigner.getWalletAddress(action, mtoken, chainId);
 };
 
+/** An on-chain field changed by a tx: `field` goes from `current` to `target` */
+export type FieldChange = {
+  field: string;
+  current: unknown;
+  target: unknown;
+};
+
 const sendAndWaitForCustomTxSignDirect = async (
   hre: HardhatRuntimeEnvironment,
   populatedTx: PopulatedTransaction,
@@ -357,6 +366,7 @@ const sendAndWaitForCustomTxSignDirect = async (
       | 'timelock-call-upgrade'
       | 'pause-function'
       | 'pause-contract'
+      | 'set-vault-setting'
       | 'set-greenlist-enabled'
       | 'set-lz-rate-limit-configs'
       | 'set-aave-pool'
@@ -374,6 +384,8 @@ const sendAndWaitForCustomTxSignDirect = async (
       | 'set-mtoken-deposits-enabled'
       | 'set-ustb-deposits-enabled'
       | 'set-user-facing-roles';
+    /** on-chain fields changed by the tx, for the sync report. Not sent to the signer */
+    changes?: FieldChange[];
   },
   safeMiddlewareWallet?: string,
   confirmations = 2,
@@ -439,6 +451,9 @@ const sendAndWaitForCustomTxSignDirect = async (
 
   const networkCustomSigner = await hreNetwork.getCustomSigner();
 
+  const signerMetadata = { ...(txSignMetadata ?? {}) };
+  delete signerMetadata.changes;
+
   const sendResult = networkCustomSigner.sendTransaction(
     {
       data: populatedTx.data!,
@@ -446,7 +461,7 @@ const sendAndWaitForCustomTxSignDirect = async (
       value: populatedTx.value,
     },
     {
-      ...(txSignMetadata ?? {}),
+      ...signerMetadata,
       chainId: hreNetwork.network.config.chainId,
       idempotenceId: txSignMetadata?.idempotenceId ?? hreNetwork.contextId,
     },
@@ -577,6 +592,49 @@ const scheduleTimelockOperationTx = async (
   return txId;
 };
 
+export type TxSignMetadata = NonNullable<
+  Parameters<typeof sendAndWaitForCustomTxSignDirect>[2]
+>;
+
+/** A tx recorded by `collectTxs` instead of being sent */
+export type PlannedTx = {
+  tx: PopulatedTransaction;
+  metadata?: TxSignMetadata;
+  safeMiddlewareWallet?: string;
+  /** sent via `sendAndWaitForTimelockedTxSign` */
+  alwaysTimelocked?: boolean;
+};
+
+type TxCollector = { txs: PlannedTx[]; skipped: string[] };
+
+const txCollector = new AsyncLocalStorage<TxCollector>();
+
+/**
+ * Runs `fn` with the send helpers recording txs instead of sending them.
+ * Returns the recorded txs in the order they were sent and the reasons of
+ * the parts skipped via `logSkipped`
+ */
+export const collectTxs = async (fn: () => Promise<unknown>) => {
+  const collector: TxCollector = { txs: [], skipped: [] };
+  await txCollector.run(collector, fn);
+  return collector;
+};
+
+/** Records the tx when called inside `collectTxs` */
+const recordTx = (planned: PlannedTx) => {
+  const collector = txCollector.getStore();
+  if (!collector) return false;
+
+  collector.txs.push(planned);
+  return true;
+};
+
+/** Logs a skipped part of a step, also reported by `collectTxs` */
+export const logSkipped = (reason: string) => {
+  console.warn(`Skipped: ${reason}`);
+  txCollector.getStore()?.skipped.push(reason);
+};
+
 /**
  * Sends a tx via the custom signer. If the call requires a timelock for the
  * sender, it is wrapped into `MidasTimelockManager.scheduleTimelockOperation`
@@ -585,6 +643,16 @@ export const sendAndWaitForCustomTxSign = async (
   ...args: Parameters<typeof sendAndWaitForCustomTxSignDirect>
 ) => {
   const [hre, populatedTx, txSignMetadata, safeMiddlewareWallet] = args;
+
+  if (
+    recordTx({
+      tx: populatedTx,
+      metadata: txSignMetadata,
+      safeMiddlewareWallet,
+    })
+  ) {
+    return 'planned';
+  }
 
   const safeCaller =
     safeMiddlewareWallet &&
@@ -624,7 +692,18 @@ export const sendAndWaitForCustomTxSign = async (
 export const sendAndWaitForTimelockedTxSign = async (
   ...args: Parameters<typeof sendAndWaitForCustomTxSignDirect>
 ) => {
-  const [hre] = args;
+  const [hre, populatedTx, txSignMetadata, safeMiddlewareWallet] = args;
+
+  if (
+    recordTx({
+      tx: populatedTx,
+      metadata: txSignMetadata,
+      safeMiddlewareWallet,
+      alwaysTimelocked: true,
+    })
+  ) {
+    return 'planned';
+  }
 
   const timelockManagerAddress = getCurrentAddresses(hre)?.timelockManager;
 
@@ -642,6 +721,43 @@ export const sendAndWaitForTimelockedTxSign = async (
     'always timelocked',
     ...args,
   );
+};
+
+/**
+ * Pause manager of the access control, the one that vaults and tokens check.
+ * If the access control is not wired yet, falls back to the configured pause
+ * manager (the one `wire:ac` wires): txs to it can be submitted now and
+ * executed once `initializeRelationships` is executed. Undefined (logged as
+ * skipped) if there is none
+ */
+export const getPauseManager = async (
+  hre: HardhatRuntimeEnvironment,
+  accessControlAddress: string,
+) => {
+  const ac = await getContractAt(
+    hre,
+    'MidasAccessControl',
+    accessControlAddress,
+  );
+  let pauseManager: string = await ac.pauseManager();
+
+  if (pauseManager === constants.AddressZero) {
+    const configured = getCurrentAddresses(hre)?.pauseManager;
+
+    if (!configured) {
+      logSkipped(
+        `access control ${accessControlAddress} has no pause manager and none is configured`,
+      );
+      return undefined;
+    }
+
+    console.warn(
+      `access control ${accessControlAddress} is not wired yet (initializeRelationships), using the configured pause manager ${configured}: the txs can be executed only after the wiring`,
+    );
+    pauseManager = configured;
+  }
+
+  return hre.ethers.getContractAt('MidasPauseManager', pauseManager);
 };
 
 export const toFunctionSelector = (signature: string) => {

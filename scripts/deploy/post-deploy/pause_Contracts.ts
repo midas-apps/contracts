@@ -5,8 +5,8 @@ import { getCurrentAddresses } from '../../../config/constants/addresses';
 import { getChainOrThrow } from '../../../helpers/utils';
 import { DeployFunction } from '../common/types';
 import {
-  getContractAt,
   getNetworkConfig,
+  getPauseManager,
   sendAndWaitForCustomTxSign,
 } from '../common/utils';
 import { getDeploymentTokenAddresses } from '../configs/deployment-profiles';
@@ -48,15 +48,8 @@ const func: DeployFunction = async (
     hre.deploymentConfig,
   );
 
-  const ac = await getContractAt(
-    hre,
-    'MidasAccessControl',
-    addresses.accessControl,
-  );
-  const pauseManager = await hre.ethers.getContractAt(
-    'MidasPauseManager',
-    await ac.pauseManager(),
-  );
+  const pauseManager = await getPauseManager(hre, addresses.accessControl);
+  if (!pauseManager) return;
 
   const toPause: { vaultType: string; vaultAddress: string }[] = [];
 
@@ -85,6 +78,11 @@ const func: DeployFunction = async (
     comment: `Pause ${mToken} ${names}`,
     action: 'update-pause-manager',
     subAction: 'pause-contract',
+    changes: toPause.map(({ vaultType }) => ({
+      field: `pauseManager.contractPaused[${vaultType}]`,
+      current: false,
+      target: true,
+    })),
   });
 
   console.log(`Paused ${mToken} ${names}`, txRes);

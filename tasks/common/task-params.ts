@@ -216,6 +216,22 @@ export const skipValidationParam: ParseParamFn<boolean> = (optional) => () => {
   };
 };
 
+/** `--dry-run true`: only print the txs the script would send */
+export const dryRunParam: ParseParamFn<boolean> = () => () => ({
+  isOptional: true,
+  name: 'dryRun',
+  description: 'Only print the planned txs, do not send them (true | false)',
+  defaultValue: 'false',
+  parse: (_, taskArgs) => {
+    const value = taskArgs.dryRun ?? 'false';
+    // anything else would silently fall back to sending
+    if (value !== 'true' && value !== 'false') {
+      throw new Error(`Invalid dryRun "${value}". Expected true or false`);
+    }
+    return value === 'true';
+  },
+});
+
 export const deploymentConfigParam: ParseParamFn<string> =
   (optional) => () => ({
     isOptional: optional ?? true,

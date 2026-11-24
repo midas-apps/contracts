@@ -55,6 +55,13 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     );
     const txRes = await sendAndWaitForCustomTxSign(hre, tx, {
       comment: `Initialize timelock controller in timelock manager`,
+      changes: [
+        {
+          field: 'timelockManager.timelock',
+          current: undefined,
+          target: addresses.timelockController,
+        },
+      ],
       action: 'update-ac',
     });
 
@@ -70,6 +77,18 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     );
     const txRes = await sendAndWaitForCustomTxSign(hre, tx, {
       comment: `Initialize relationships in access control`,
+      changes: [
+        {
+          field: 'accessControl.timelockManager',
+          current: undefined,
+          target: addresses.timelockManager,
+        },
+        {
+          field: 'accessControl.pauseManager',
+          current: undefined,
+          target: addresses.pauseManager,
+        },
+      ],
       action: 'update-ac',
     });
 

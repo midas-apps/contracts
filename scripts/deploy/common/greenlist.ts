@@ -44,6 +44,13 @@ export const applyGreenlistConfig = async (
       } greenlist in ${mToken} ${vaultType}`,
       action: 'update-vault',
       subAction: 'set-greenlist-enabled',
+      changes: [
+        {
+          field: `${vaultType}.greenlistEnabled`,
+          current: !enabled,
+          target: enabled,
+        },
+      ],
     });
 
     console.log(

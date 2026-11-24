@@ -14,6 +14,7 @@ import {
   getDeployer,
   getDeploymentGenericConfig,
   getDeploymentGenericConfigOptional,
+  FieldChange,
   getNetworkConfig,
   sendAndWaitForCustomTxSign,
 } from './utils';
@@ -536,6 +537,306 @@ export const updateExpectedAnswersMToken = async (
   }
 };
 
+/**
+ * Syncs mToken feed settings with the generic config: custom aggregators
+ * (min/max answer, max answer deviation, growth APR bounds and onlyUp) and
+ * data feeds (healthy diff). Only fields set in the config are synced.
+ * Expected answers are synced by `updateExpectedAnswersMToken`
+ */
+export const updateFeedSettingsMToken = async (
+  hre: HardhatRuntimeEnvironment,
+  token: MTokenName,
+) => {
+  const tokenAddresses = getCurrentAddresses(hre)?.[token];
+
+  if (!tokenAddresses) {
+    throw new Error(`Token addresses are not found for ${token}`);
+  }
+
+  const addresses = getDeploymentTokenAddresses(
+    tokenAddresses,
+    token,
+    hre.deploymentConfig,
+  );
+
+  for (const target of ['general', 'dv', 'rv'] as const) {
+    const config = getDeploymentGenericConfigOptional(
+      hre,
+      token,
+      customAggregatorConfigKeys[target],
+    );
+    if (!config) continue;
+
+    const isGrowth = config.type === 'GROWTH';
+    const addressKey =
+      target === 'general'
+        ? isGrowth
+          ? 'customFeedGrowth'
+          : 'customFeed'
+        : customFeedAddressKeys[target];
+    const address = addresses[addressKey];
+    const label = target === 'general' ? token : `${token} (${target} feed)`;
+
+    if (!address) {
+      console.log(`${label} custom aggregator is not deployed, skipping`);
+      continue;
+    }
+
+    await syncCustomAggregator(hre, {
+      token,
+      label,
+      field: addressKey,
+      address,
+      config,
+    });
+  }
+
+  const dataFeedConfigs = {
+    dataFeed: getDeploymentGenericConfigOptional(hre, token, 'dataFeed'),
+    dataFeedDv: getDeploymentGenericConfigOptional(hre, token, 'dataFeedDv'),
+    dataFeedRv: getDeploymentGenericConfigOptional(hre, token, 'dataFeedRv'),
+  };
+
+  const hasHealthyDiff = Object.values(dataFeedConfigs).some(
+    (c) => c && 'healthyDiff' in c && c.healthyDiff !== undefined,
+  );
+  if (!hasHealthyDiff) return;
+
+  for (const {
+    dataFeedAddress,
+    networkConfig,
+  } of getMTokenExpectedAnswersTargets(tokenAddresses, dataFeedConfigs)) {
+    if (networkConfig.healthyDiff === undefined) continue;
+
+    const dataFeed = (await getContractAt(
+      hre,
+      'DataFeed',
+      dataFeedAddress,
+    )) as DataFeed;
+    const current = await dataFeed.healthyDiff();
+
+    if (current.eq(networkConfig.healthyDiff)) {
+      console.log(
+        `${token} dataFeed ${dataFeedAddress} healthyDiff is already ${current}`,
+      );
+      continue;
+    }
+
+    await sendFeedSettingTx(
+      hre,
+      token,
+      await dataFeed.populateTransaction.setHealthyDiff(
+        networkConfig.healthyDiff,
+      ),
+      `${token} set dataFeed ${dataFeedAddress} healthyDiff: ${current} -> ${networkConfig.healthyDiff}`,
+      [
+        {
+          field: `dataFeed(${dataFeedAddress}).healthyDiff`,
+          current,
+          target: networkConfig.healthyDiff,
+        },
+      ],
+    );
+  }
+};
+
+const sendFeedSettingTx = async (
+  hre: HardhatRuntimeEnvironment,
+  token: MTokenName,
+  tx: PopulatedTransaction,
+  comment: string,
+  changes: FieldChange[],
+) => {
+  const txRes = await sendAndWaitForCustomTxSign(hre, tx, {
+    action: 'update-feed-mtoken',
+    mToken: token,
+    comment,
+    changes,
+  });
+  console.log(comment, txRes);
+};
+
+const syncCustomAggregator = async (
+  hre: HardhatRuntimeEnvironment,
+  {
+    token,
+    label,
+    field,
+    address,
+    config,
+  }: {
+    token: MTokenName;
+    label: string;
+    /** address key of the aggregator, prefix of the reported fields */
+    field: string;
+    address: string;
+    config: DeployCustomAggregatorConfig;
+  },
+) => {
+  // setters shared by regular and growth aggregators have the same ABI
+  const aggregator = await getAggregatorContract(hre, address);
+  const decimals = await aggregator.decimals();
+  const format = (v: BigNumberish) => formatUnits(v, decimals);
+
+  if (config.minAnswer !== undefined || config.maxAnswer !== undefined) {
+    const [currentMin, currentMax] = await Promise.all([
+      aggregator.minAnswer(),
+      aggregator.maxAnswer(),
+    ]);
+    const min = BigNumber.from(config.minAnswer ?? currentMin);
+    const max = BigNumber.from(config.maxAnswer ?? currentMax);
+
+    if (min.eq(currentMin) && max.eq(currentMax)) {
+      console.log(`${label} aggregator min/max answer are already up to date`);
+    } else {
+      if (!min.lt(max)) {
+        throw new Error(
+          `${label} aggregator minAnswer (${min}) must be less than maxAnswer (${max})`,
+        );
+      }
+
+      const { answer, roundId } = await aggregator.latestRoundData();
+      if (!isAnswerWithinExpectedRange(roundId, answer, min, max)) {
+        throw new Error(
+          `${label} aggregator answer ${format(
+            answer,
+          )} is outside the new range [${format(min)}, ${format(max)}]`,
+        );
+      }
+
+      await sendFeedSettingTx(
+        hre,
+        token,
+        await aggregator.populateTransaction.setMinMaxAnswer(min, max),
+        `${label} set aggregator min/max answer: [${format(
+          currentMin,
+        )}, ${format(currentMax)}] -> [${format(min)}, ${format(max)}]`,
+        [
+          {
+            field: `${field}.minAnswer`,
+            current: format(currentMin),
+            target: format(min),
+          },
+          {
+            field: `${field}.maxAnswer`,
+            current: format(currentMax),
+            target: format(max),
+          },
+        ],
+      );
+    }
+  }
+
+  const currentDeviation = await aggregator.maxAnswerDeviation();
+  if (currentDeviation.eq(config.maxAnswerDeviation)) {
+    console.log(
+      `${label} aggregator maxAnswerDeviation is already ${format(
+        currentDeviation,
+      )}%`,
+    );
+  } else {
+    await sendFeedSettingTx(
+      hre,
+      token,
+      await aggregator.populateTransaction.setMaxAnswerDeviation(
+        config.maxAnswerDeviation,
+      ),
+      `${label} set aggregator maxAnswerDeviation: ${format(
+        currentDeviation,
+      )}% -> ${format(config.maxAnswerDeviation)}%`,
+      [
+        {
+          field: `${field}.maxAnswerDeviation`,
+          current: `${format(currentDeviation)}%`,
+          target: `${format(config.maxAnswerDeviation)}%`,
+        },
+      ],
+    );
+  }
+
+  if (config.type !== 'GROWTH') return;
+
+  const growth = await getAggregatorGrowthContract(hre, address);
+
+  const currentOnlyUp = await growth.onlyUp();
+  if (currentOnlyUp === config.onlyUp) {
+    console.log(`${label} aggregator onlyUp is already ${config.onlyUp}`);
+  } else {
+    await sendFeedSettingTx(
+      hre,
+      token,
+      await growth.populateTransaction.setOnlyUp(config.onlyUp),
+      `${label} set aggregator onlyUp to ${config.onlyUp}`,
+      [
+        {
+          field: `${field}.onlyUp`,
+          current: currentOnlyUp,
+          target: config.onlyUp,
+        },
+      ],
+    );
+  }
+
+  const [currentMinApr, currentMaxApr] = await Promise.all([
+    growth.minGrowthApr(),
+    growth.maxGrowthApr(),
+  ]);
+  const minApr = BigNumber.from(config.minGrowthApr);
+  const maxApr = BigNumber.from(config.maxGrowthApr);
+
+  if (minApr.gt(maxApr)) {
+    throw new Error(
+      `${label} aggregator minGrowthApr (${minApr}) must not exceed maxGrowthApr (${maxApr})`,
+    );
+  }
+
+  const setMinApr = async () => {
+    if (currentMinApr.eq(minApr)) return;
+    await sendFeedSettingTx(
+      hre,
+      token,
+      await growth.populateTransaction.setMinGrowthApr(minApr),
+      `${label} set aggregator minGrowthApr: ${format(
+        currentMinApr,
+      )}% -> ${format(minApr)}%`,
+      [
+        {
+          field: `${field}.minGrowthApr`,
+          current: `${format(currentMinApr)}%`,
+          target: `${format(minApr)}%`,
+        },
+      ],
+    );
+  };
+  const setMaxApr = async () => {
+    if (currentMaxApr.eq(maxApr)) return;
+    await sendFeedSettingTx(
+      hre,
+      token,
+      await growth.populateTransaction.setMaxGrowthApr(maxApr),
+      `${label} set aggregator maxGrowthApr: ${format(
+        currentMaxApr,
+      )}% -> ${format(maxApr)}%`,
+      [
+        {
+          field: `${field}.maxGrowthApr`,
+          current: `${format(currentMaxApr)}%`,
+          target: `${format(maxApr)}%`,
+        },
+      ],
+    );
+  };
+
+  // each setter checks the new bound against the other current bound
+  if (minApr.gt(currentMaxApr)) {
+    await setMaxApr();
+    await setMinApr();
+  } else {
+    await setMinApr();
+    await setMaxApr();
+  }
+};
+
 const updateExpectedAnswers = async (
   hre: HardhatRuntimeEnvironment,
   {
@@ -756,6 +1057,18 @@ const applyExpectedAnswerUpdates = async (
   const txRes = await sendAndWaitForCustomTxSign(hre, tx, {
     action,
     comment: log,
+    changes: [
+      {
+        field: `dataFeed(${dataFeed.address}).minExpectedAnswer`,
+        current: formatUnits(currentMin, decimals),
+        target: formatUnits(newMin, decimals),
+      },
+      {
+        field: `dataFeed(${dataFeed.address}).maxExpectedAnswer`,
+        current: formatUnits(currentMax, decimals),
+        target: formatUnits(newMax, decimals),
+      },
+    ],
   });
   console.log(log, txRes);
 };

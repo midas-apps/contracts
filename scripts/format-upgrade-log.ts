@@ -1,6 +1,8 @@
 import { spawnSync } from 'child_process';
 import { readFileSync } from 'fs';
 
+import { detectNetwork, outputResult, stripColors } from './log-format-common';
+
 /**
  * Formats the log of a timelock upgrade run (`propose` / `execute`) into the
  * markdown summary that is posted for the signers, and copies it to the
@@ -33,9 +35,6 @@ const MODE_ALIASES: Record<string, Mode> = {
   execute: 'execute',
   '2': 'execute',
 };
-
-// eslint-disable-next-line no-control-regex
-const ANSI_COLORS = /\u001b\[[0-9;]*m/g;
 
 const USAGE =
   'Usage: yarn upgrade:format-log <LOG_PATH> [propose|execute] [--print]';
@@ -87,7 +86,7 @@ const parseUpgrade = (lines: string[]): ParsedUpgrade | null => {
 
 /** One block per upgraded contract: from its `Upgrading <name>` line to the next one */
 const splitUpgrades = (log: string): string[][] => {
-  const lines = log.replace(ANSI_COLORS, '').split(/\r?\n/);
+  const lines = stripColors(log).split(/\r?\n/);
   const starts = lines.flatMap((l, i) =>
     l.startsWith('Upgrading ') ? [i] : [],
   );
@@ -102,10 +101,6 @@ const detectMode = (log: string): Mode | undefined => {
   if (isPropose === isExecute) return undefined;
   return isPropose ? 'propose' : 'execute';
 };
-
-/** Network of the txs sent in the run */
-const detectNetwork = (log: string) =>
-  log.match(/"chain":\s*\{\s*"name":\s*"([^"]+)"/)?.[1];
 
 /** Config keys (`radUSD.dataFeedDv`, ...) by the lowercased address */
 const getAddressKeys = async (network: string) => {
@@ -163,24 +158,6 @@ const format = (upgrades: ParsedUpgrade[], mode: Mode) =>
     ? numbered(upgrades.map(formatPropose)).join('\n\n\n')
     : '**Execute Transactions:**\n\n' +
       numbered(upgrades.map(formatExecute)).join('\n');
-
-const CLIPBOARD_COMMANDS: Partial<
-  Record<NodeJS.Platform, [command: string, args: string[]][]>
-> = {
-  darwin: [['pbcopy', []]],
-  win32: [['clip', []]],
-  linux: [
-    ['wl-copy', []],
-    ['xclip', ['-selection', 'clipboard']],
-    ['xsel', ['--clipboard', '--input']],
-  ],
-};
-
-const copyToClipboard = (text: string) =>
-  (CLIPBOARD_COMMANDS[process.platform] ?? []).some(([command, args]) => {
-    const { error, status } = spawnSync(command, args, { input: text });
-    return !error && status === 0;
-  });
 
 /**
  * The addresses config relies on the hardhat type extensions and does not
@@ -270,19 +247,11 @@ const main = async () => {
     );
   }
 
-  const result = format(labeled, mode);
-
-  if (!print && copyToClipboard(result)) {
-    console.error(
-      `Copied ${upgrades.length} ${mode} upgrade(s) to the clipboard`,
-    );
-    return;
-  }
-
-  if (!print) {
-    console.error('Clipboard is not available, printing the result instead\n');
-  }
-  console.log(result);
+  outputResult(
+    format(labeled, mode),
+    print,
+    `Copied ${upgrades.length} ${mode} upgrade(s) to the clipboard`,
+  );
 };
 
 main().catch((e) => {

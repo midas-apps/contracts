@@ -215,6 +215,10 @@ Both vault versions (add `--vault-version <v1|v2>`):
 
 v2 vaults only:
 
+- `yarn deploy:format-log [LOG_PATH] [--print]`: format the log of a deploy / post-deploy run (latest `logs/log-*.log` by default) into a Linear-ready list of txs with the Fordefi tx id and the timelock operation id of timelocked txs, copied to the clipboard
+- `yarn deploy:post:sync`: sync the whole product config of the network with on-chain state in one run. Runs the post-deploy steps below (roles, vault settings, payment tokens, fee waived, greenlist, limits, token config, feed settings, expected answers, pauses) with sending replaced by recording, merges bulk calls from the same wallet (`grantRoleMult`, `revokeRoleMult`, `bulkPauseContract`, `bulkPauseContractFn`), then sends. Nothing is sent if a step fails. `--dry-run true` only prints the txs. Not synced: `setRoundData`, `set:sanctionsList`, LayerZero, Axelar. To sync a new setting, add it to an existing step or add a step to `syncSteps` in `post-deploy/sync_MToken.ts`
+- `yarn deploy:post:set:feed-settings`: sync mToken feeds with `genericConfigs`: custom aggregators (`customAggregator`, `customAggregatorDv/Rv`: min/max answer, max answer deviation, growth APR bounds and `onlyUp`) and data feeds (`healthyDiff`). Only fields set in the config are synced; expected answers are synced by `set:expected-answers`
+- `yarn deploy:post:set:vaultsettings`: sync the settings of deployed vaults with their deploy config (`dv`, `rv`, ...): min amount, instant fee and its bounds, max instant share, variation tolerance, max approve request id, sequential request processing, tokens receiver, sanctions list, DV min first deposit and max amount per request, RV request redeemer. Only fields set in the config are synced
 - `yarn deploy:post:set:waived`: waive vault fee for an address (`addFeeWaived`)
 - `yarn deploy:post:pause:functions`: pause selected vault functions via the pause manager (`pauseFunctions`)
 - `yarn deploy:post:pause:contracts`: pause whole vaults via the pause manager (`pauseContracts`)
@@ -228,6 +232,8 @@ v2 vaults only:
 
 Network level (no `--mtoken`):
 
+- `yarn deploy:post:sync:network`: sync the network level contracts with `network-configs.ts` and the network roles in one run, the same way as `deploy:post:sync` (`--dry-run true` only prints the table). Runs `wire:ac`, `grant:v2-network-roles`, `set:userfacingroles`, `set:pause-delays` and `set:network-settings`. Not synced: `grant:admin`, `revoke:roles`, `transfer:proxyadmin` (deployer one-offs)
+- `yarn deploy:post:set:network-settings`: access control default delay (always timelocked) and timelock manager max pending operations per proposer. The security council and the timelock min delay are only compared, mismatches are reported as skipped
 - `yarn deploy:post:set:userfacingroles`: mark all greenlisted and min balance exempt roles as user facing on access control
 
 ## Troubleshooting

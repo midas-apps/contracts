@@ -1,9 +1,18 @@
-import { BigNumber, BigNumberish, PopulatedTransaction } from 'ethers';
+import {
+  BigNumber,
+  BigNumberish,
+  constants,
+  PopulatedTransaction,
+} from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import type { DeployDvConfig } from './dv';
+import type { DeployRvConfig } from './rv';
+import type { DeploymentConfig } from './types';
 import {
   getContractAt,
   getNetworkConfig,
+  FieldChange,
   sendAndWaitForCustomTxSign,
 } from './utils';
 
@@ -12,16 +21,19 @@ import {
   DepositVaultType,
   getCurrentAddresses,
   RedemptionVaultType,
+  sanctionListContracts,
   TokenAddresses,
   V2VaultType,
 } from '../../../config/constants/addresses';
 import {
+  DepositVault,
   DepositVaultWithMToken,
   DepositVaultWithUSTB,
   ManageableVault,
   MToken,
   RedemptionVault,
 } from '../../../typechain-types';
+import { getDeploymentConfigForToken } from '../configs';
 import { getDeploymentTokenAddresses } from '../configs/deployment-profiles';
 
 type Address = `0x${string}`;
@@ -133,12 +145,14 @@ const send = async (
   action: TxSignMetadata['action'],
   subAction: TxSignMetadata['subAction'],
   comment: string,
+  changes?: FieldChange[],
 ) => {
   const txRes = await sendAndWaitForCustomTxSign(hre, tx, {
     mToken,
     action,
     subAction,
     comment,
+    changes,
   });
   console.log(`${comment}: tx initiated`, txRes);
 };
@@ -182,6 +196,13 @@ export const setInstantLimits = async (
         'update-vault',
         'set-instant-limit',
         `set ${mToken} ${vaultType} instant limit window=${window} limit=${limit}`,
+        [
+          {
+            field: `${vaultType}.instantLimit[${window}s]`,
+            current: existing?.limit,
+            target: limit,
+          },
+        ],
       );
     }
 
@@ -234,6 +255,44 @@ export const setMintRateLimits = async (
       continue;
     }
 
+    // a new window can only be created via increase (limit > 0), so a zero
+    // limit takes two calls: increase to 1 wei, then decrease to 0
+    if (!current && BigNumber.from(limit).isZero()) {
+      await send(
+        hre,
+        await token.populateTransaction.increaseMintRateLimit(
+          bucketId,
+          window,
+          1,
+        ),
+        mToken,
+        'update-token',
+        'set-mint-rate-limit',
+        `create ${mToken} mint limit bucket=${bucketId} window=${window} limit=1`,
+        [],
+      );
+      await send(
+        hre,
+        await token.populateTransaction.decreaseMintRateLimit(
+          bucketId,
+          window,
+          0,
+        ),
+        mToken,
+        'update-token',
+        'set-mint-rate-limit',
+        `decrease ${mToken} mint limit bucket=${bucketId} window=${window} limit=0`,
+        [
+          {
+            field: `token.mintRateLimit[bucket ${bucketId}][${window}s]`,
+            current: undefined,
+            target: limit,
+          },
+        ],
+      );
+      continue;
+    }
+
     // the contract only allows raising via increase and lowering via decrease
     const isIncrease = !current || currentLimit.lt(limit);
 
@@ -256,13 +315,21 @@ export const setMintRateLimits = async (
       `${
         isIncrease ? 'increase' : 'decrease'
       } ${mToken} mint limit bucket=${bucketId} window=${window} limit=${limit}`,
+      [
+        {
+          field: `token.mintRateLimit[bucket ${bucketId}][${window}s]`,
+          current: current?.limit,
+          target: limit,
+        },
+      ],
     );
   }
 
   for (const { wallet, bucketId } of config.walletBuckets ?? []) {
     const walletAddress = resolveAddressOrVault(tokenAddresses, mToken, wallet);
 
-    if ((await token.walletBucketId(walletAddress)) === bucketId) {
+    const currentBucketId = await token.walletBucketId(walletAddress);
+    if (currentBucketId === bucketId) {
       console.log(`${mToken} ${wallet} is already in bucket ${bucketId}`);
       continue;
     }
@@ -277,7 +344,224 @@ export const setMintRateLimits = async (
       'update-token',
       'set-wallet-bucket',
       `set ${mToken} ${wallet} (${walletAddress}) mint bucket to ${bucketId}`,
+      [
+        {
+          field: `token.walletBucketId[${wallet}]`,
+          current: currentBucketId,
+          target: bucketId,
+        },
+      ],
     );
+  }
+};
+
+type V2VaultConfigKey = keyof Omit<
+  DeploymentConfig['networkConfigs'][number],
+  'rvSwapper' | 'token' | 'postDeploy'
+>;
+
+/** v2 vault deploy config keys and their vaults */
+const v2VaultConfigKeys: [V2VaultConfigKey, V2VaultType][] = [
+  ['dv', 'depositVault'],
+  ['dvUstb', 'depositVaultUstb'],
+  ['dvAave', 'depositVaultAave'],
+  ['dvMorpho', 'depositVaultMorpho'],
+  ['dvMToken', 'depositVaultMToken'],
+  ['rv', 'redemptionVault'],
+  ['rvUstb', 'redemptionVaultUstb'],
+  ['rvAave', 'redemptionVaultAave'],
+  ['rvMorpho', 'redemptionVaultMorpho'],
+  ['rvMToken', 'redemptionVaultMToken'],
+];
+
+const isSameValue = (current: unknown, target: unknown) => {
+  if (BigNumber.isBigNumber(current)) {
+    return current.eq(target as BigNumberish);
+  }
+  if (typeof current === 'string') {
+    return current.toLowerCase() === String(target).toLowerCase();
+  }
+  return current === target;
+};
+
+/**
+ * Syncs the settings of deployed v2 vaults with their deploy configs
+ * (`dv`, `rv`, ...). Only the fields set in the config are synced.
+ * `mTokenDataFeed` (no setter) and `loanConfig` are not synced
+ */
+export const setVaultSettings = async (
+  hre: HardhatRuntimeEnvironment,
+  mToken: MTokenName,
+) => {
+  const chainId = hre.network.config.chainId!;
+  const networkConfig = getDeploymentConfigForToken(
+    mToken,
+    hre.deploymentConfig,
+  )?.networkConfigs?.[chainId];
+
+  const tokenAddresses = getV2TokenAddresses(hre, mToken);
+
+  for (const [configKey, vaultType] of v2VaultConfigKeys) {
+    const config = networkConfig?.[configKey];
+    if (config?.version !== 'v2') continue;
+
+    const label = `${mToken} ${vaultType}`;
+    const address = requireVaultAddress(tokenAddresses, mToken, vaultType);
+    const vault = (await getContractAt(
+      hre,
+      'ManageableVault',
+      address,
+    )) as ManageableVault;
+
+    const sync = async <T>(
+      name: string,
+      target: T | undefined,
+      getCurrent: () => Promise<unknown>,
+      populate: (value: T) => Promise<PopulatedTransaction>,
+    ) => {
+      if (target === undefined) return;
+
+      const current = await getCurrent();
+      if (isSameValue(current, target)) {
+        console.log(`${label} ${name} is already ${target}`);
+        return;
+      }
+
+      await send(
+        hre,
+        await populate(target),
+        mToken,
+        'update-vault',
+        'set-vault-setting',
+        `set ${label} ${name}: ${current} -> ${target}`,
+        [{ field: `${vaultType}.${name}`, current, target }],
+      );
+    };
+
+    const tokensReceiver =
+      !config.tokensReceiver || config.tokensReceiver.startsWith('0x')
+        ? config.tokensReceiver
+        : resolveAddressOrVault(
+            tokenAddresses,
+            mToken,
+            config.tokensReceiver as V2VaultType,
+          );
+
+    let sanctionsList: string | undefined;
+    if (config.enableSanctionsList !== undefined) {
+      sanctionsList = config.enableSanctionsList
+        ? sanctionListContracts[chainId]
+        : constants.AddressZero;
+      if (!sanctionsList) {
+        throw new Error('Sanctions list address is not found');
+      }
+    }
+
+    await sync(
+      'minAmount',
+      config.minAmount,
+      () => vault.minAmount(),
+      (v) => vault.populateTransaction.setMinAmount(v),
+    );
+    await sync(
+      'instantFee',
+      config.instantFee,
+      () => vault.instantFee(),
+      (v) => vault.populateTransaction.setInstantFee(v),
+    );
+
+    // both bounds are set by one setter
+    if (
+      config.minInstantFee !== undefined ||
+      config.maxInstantFee !== undefined
+    ) {
+      const [currentMin, currentMax] = await Promise.all([
+        vault.minInstantFee(),
+        vault.maxInstantFee(),
+      ]);
+      const min = BigNumber.from(config.minInstantFee ?? currentMin);
+      const max = BigNumber.from(config.maxInstantFee ?? currentMax);
+
+      await sync(
+        'minInstantFee/maxInstantFee',
+        `${min}/${max}`,
+        async () => `${currentMin}/${currentMax}`,
+        () => vault.populateTransaction.setMinMaxInstantFee(min, max),
+      );
+    }
+
+    await sync(
+      'maxInstantShare',
+      config.maxInstantShare,
+      () => vault.maxInstantShare(),
+      (v) => vault.populateTransaction.setMaxInstantShare(v),
+    );
+    await sync(
+      'variationTolerance',
+      config.variationTolerance,
+      () => vault.variationTolerance(),
+      (v) => vault.populateTransaction.setVariationTolerance(v),
+    );
+    await sync(
+      'maxApproveRequestId',
+      config.maxApproveRequestId,
+      () => vault.maxApproveRequestId(),
+      (v) => vault.populateTransaction.setMaxApproveRequestId(v),
+    );
+    await sync(
+      'sequentialRequestProcessing',
+      config.sequentialRequestProcessing,
+      () => vault.sequentialRequestProcessing(),
+      (v) => vault.populateTransaction.setSequentialRequestProcessing(v),
+    );
+    await sync(
+      'tokensReceiver',
+      tokensReceiver,
+      () => vault.tokensReceiver(),
+      (v) => vault.populateTransaction.setTokensReceiver(v),
+    );
+    await sync(
+      'sanctionsList',
+      sanctionsList,
+      () => vault.sanctionsList(),
+      (v) => vault.populateTransaction.setSanctionsList(v),
+    );
+
+    if (vaultType.startsWith('depositVault')) {
+      const dvConfig = config as Extract<DeployDvConfig, { version: 'v2' }>;
+      const dv = (await getContractAt(
+        hre,
+        'DepositVault',
+        address,
+      )) as DepositVault;
+
+      await sync(
+        'minMTokenAmountForFirstDeposit',
+        dvConfig.minMTokenAmountForFirstDeposit,
+        () => dv.minMTokenAmountForFirstDeposit(),
+        (v) => dv.populateTransaction.setMinMTokenAmountForFirstDeposit(v),
+      );
+      await sync(
+        'maxAmountPerRequest',
+        dvConfig.maxAmountPerRequest,
+        () => dv.maxAmountPerRequest(),
+        (v) => dv.populateTransaction.setMaxAmountPerRequest(v),
+      );
+    } else {
+      const rvConfig = config as Extract<DeployRvConfig, { version: 'v2' }>;
+      const rv = (await getContractAt(
+        hre,
+        'RedemptionVault',
+        address,
+      )) as RedemptionVault;
+
+      await sync(
+        'requestRedeemer',
+        rvConfig.requestRedeemer,
+        () => rv.requestRedeemer(),
+        (v) => rv.populateTransaction.setRequestRedeemer(v),
+      );
+    }
   }
 };
 
@@ -302,7 +586,8 @@ export const setTokenConfig = async (
   )) as MToken;
 
   if (config.maxSupplyCap !== undefined) {
-    if ((await token.maxSupplyCap()).eq(config.maxSupplyCap)) {
+    const currentCap = await token.maxSupplyCap();
+    if (currentCap.eq(config.maxSupplyCap)) {
       console.log(`${mToken} max supply cap is already ${config.maxSupplyCap}`);
     } else {
       await send(
@@ -312,14 +597,21 @@ export const setTokenConfig = async (
         'update-token',
         'set-max-supply-cap',
         `set ${mToken} max supply cap to ${config.maxSupplyCap}`,
+        [
+          {
+            field: 'token.maxSupplyCap',
+            current: currentCap,
+            target: config.maxSupplyCap,
+          },
+        ],
       );
     }
   }
 
   if (config.clawbackReceiver !== undefined) {
+    const currentReceiver = await token.clawbackReceiver();
     if (
-      (await token.clawbackReceiver()).toLowerCase() ===
-      config.clawbackReceiver.toLowerCase()
+      currentReceiver.toLowerCase() === config.clawbackReceiver.toLowerCase()
     ) {
       console.log(
         `${mToken} clawback receiver is already ${config.clawbackReceiver}`,
@@ -334,6 +626,13 @@ export const setTokenConfig = async (
         'update-token',
         'set-clawback-receiver',
         `set ${mToken} clawback receiver to ${config.clawbackReceiver}`,
+        [
+          {
+            field: 'token.clawbackReceiver',
+            current: currentReceiver,
+            target: config.clawbackReceiver,
+          },
+        ],
       );
     }
   }
@@ -373,6 +672,13 @@ export const setFreeFromMinAmount = async (
         'update-vault',
         'free-from-min-amount',
         `free ${account} (${address}) from min amount in ${mToken} ${vaultType}`,
+        [
+          {
+            field: `${vaultType}.isFreeFromMinAmount[${account}]`,
+            current: false,
+            target: true,
+          },
+        ],
       );
     }
   }
@@ -411,6 +717,13 @@ export const setPreferLoanLiquidity = async (
       'update-vault',
       'set-prefer-loan-liquidity',
       `set ${mToken} ${vaultType} preferLoanLiquidity to ${enabled}`,
+      [
+        {
+          field: `${vaultType}.preferLoanLiquidity`,
+          current: !enabled,
+          target: enabled,
+        },
+      ],
     );
   }
 };
@@ -445,6 +758,13 @@ export const setMTokenVaultConfig = async (
         'update-vault',
         'set-mtoken-deposits-enabled',
         `set ${mToken} ${vaultType} mToken deposits enabled to ${config.depositsEnabled}`,
+        [
+          {
+            field: `${vaultType}.mTokenDepositsEnabled`,
+            current: !config.depositsEnabled,
+            target: config.depositsEnabled,
+          },
+        ],
       );
     }
   }
@@ -467,6 +787,13 @@ export const setMTokenVaultConfig = async (
         'update-vault',
         'set-auto-invest-fallback-enabled',
         `set ${mToken} ${vaultType} auto invest fallback to ${config.autoInvestFallbackEnabled}`,
+        [
+          {
+            field: `${vaultType}.autoInvestFallbackEnabled`,
+            current: !config.autoInvestFallbackEnabled,
+            target: config.autoInvestFallbackEnabled,
+          },
+        ],
       );
     }
   }
@@ -505,5 +832,12 @@ export const setUstbVaultConfig = async (
     'update-vault',
     'set-ustb-deposits-enabled',
     `set ${mToken} ${vaultType} USTB deposits enabled to ${config.depositsEnabled}`,
+    [
+      {
+        field: `${vaultType}.ustbDepositsEnabled`,
+        current: !config.depositsEnabled,
+        target: config.depositsEnabled,
+      },
+    ],
   );
 };

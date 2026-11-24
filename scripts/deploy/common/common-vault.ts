@@ -119,6 +119,13 @@ export const setFeeWaivedAccounts = async (
         subAction: 'add-fee-waived',
         comment: `waive fee for ${feeWaiveLabel} in ${vaultMToken} ${vaultType}`,
         mToken: vaultMToken,
+        changes: [
+          {
+            field: `${vaultType}.waivedFeeRestriction[${feeWaiveLabel}]`,
+            current: waived,
+            target: value,
+          },
+        ],
       });
 
       console.log(`${vaultType} tx initiated`, txRes);
@@ -171,18 +178,29 @@ export const addPaymentTokens = async (
         return;
       }
 
+      const fee = paymentToken.fee ?? BigNumber.from(0);
+      const allowance = paymentToken.allowance ?? constants.MaxUint256;
+      const isStable = paymentToken.isStable ?? true;
+
       const tx = await vaultContract.populateTransaction.addPaymentToken(
         tokenConfig.token!,
         tokenConfig.dataFeed!,
-        paymentToken.fee ?? BigNumber.from(0),
-        paymentToken.allowance ?? constants.MaxUint256,
-        paymentToken.isStable ?? true,
+        fee,
+        allowance,
+        isStable,
       );
 
       const txRes = await sendAndWaitForCustomTxSign(hre, tx, {
         action: 'update-vault',
         subAction: 'add-payment-token',
         comment: `add ${paymentToken.token} to ${token} ${vaultType}`,
+        changes: [
+          {
+            field: `${vaultType}.paymentToken[${paymentToken.token}]`,
+            current: undefined,
+            target: `fee=${fee} allowance=${allowance} stable=${isStable} feed=${tokenConfig.dataFeed}`,
+          },
+        ],
       });
 
       console.log(`${vaultType}:${paymentToken.token} tx initiated`, txRes);
@@ -411,6 +429,13 @@ export const setAaveConfig = async (
           subAction: 'set-aave-pool',
           comment: `Set Aave pool of ${token} for ${mToken} ${entry.type}`,
           mToken,
+          changes: [
+            {
+              field: `${entry.type}.aavePools[${token}]`,
+              current: currentPool,
+              target: aavePool,
+            },
+          ],
         });
         console.log(`Set Aave pool of ${token} for ${mToken} ${entry.type}`);
       } else {
@@ -437,6 +462,13 @@ export const setAaveConfig = async (
         subAction: 'set-aave-deposits-enabled',
         comment: `Set aaveDepositsEnabled=${targetDepositsEnabled} for ${mToken} depositVaultAave`,
         mToken,
+        changes: [
+          {
+            field: 'depositVaultAave.aaveDepositsEnabled',
+            current: depositsEnabled,
+            target: targetDepositsEnabled,
+          },
+        ],
       });
       console.log(
         `Set aaveDepositsEnabled=${targetDepositsEnabled} for ${mToken} depositVaultAave`,
@@ -458,6 +490,13 @@ export const setAaveConfig = async (
         subAction: 'set-auto-invest-fallback-enabled',
         comment: `Set autoInvestFallbackEnabled=${targetFallbackEnabled} for ${mToken} depositVaultAave`,
         mToken,
+        changes: [
+          {
+            field: 'depositVaultAave.autoInvestFallbackEnabled',
+            current: fallbackEnabled,
+            target: targetFallbackEnabled,
+          },
+        ],
       });
       console.log(
         `Set autoInvestFallbackEnabled=${targetFallbackEnabled} for ${mToken} depositVaultAave`,
@@ -541,6 +580,13 @@ export const setMorphoConfig = async (
           subAction: 'set-morpho-vault',
           comment: `Set Morpho vault of ${token} for ${mToken} ${entry.type}`,
           mToken,
+          changes: [
+            {
+              field: `${entry.type}.morphoVaults[${token}]`,
+              current: currentVault,
+              target: morphoVault,
+            },
+          ],
         });
         console.log(`Set Morpho vault of ${token} for ${mToken} ${entry.type}`);
       } else {
@@ -567,6 +613,13 @@ export const setMorphoConfig = async (
         subAction: 'set-morpho-deposits-enabled',
         comment: `Set morphoDepositsEnabled=${targetDepositsEnabled} for ${mToken} depositVaultMorpho`,
         mToken,
+        changes: [
+          {
+            field: 'depositVaultMorpho.morphoDepositsEnabled',
+            current: depositsEnabled,
+            target: targetDepositsEnabled,
+          },
+        ],
       });
       console.log(
         `Set morphoDepositsEnabled=${targetDepositsEnabled} for ${mToken} depositVaultMorpho`,
@@ -588,6 +641,13 @@ export const setMorphoConfig = async (
         subAction: 'set-auto-invest-fallback-enabled',
         comment: `Set autoInvestFallbackEnabled=${targetFallbackEnabled} for ${mToken} depositVaultMorpho`,
         mToken,
+        changes: [
+          {
+            field: 'depositVaultMorpho.autoInvestFallbackEnabled',
+            current: fallbackEnabled,
+            target: targetFallbackEnabled,
+          },
+        ],
       });
       console.log(
         `Set autoInvestFallbackEnabled=${targetFallbackEnabled} for ${mToken} depositVaultMorpho`,
