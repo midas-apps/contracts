@@ -3,15 +3,16 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { getCurrentAddresses } from '../../../config/constants/addresses';
 import { MidasPauseManager__factory } from '../../../typechain-types';
 import { DeployFunction, PAUSE_DELAY } from '../common/types';
-import { sendAndWaitForCustomTxSign } from '../common/utils';
+import { sendAndWaitForTimelockedTxSign } from '../common/utils';
 import { networkDeploymentConfigs } from '../configs/network-configs';
 
 /**
  * Sets the delays of MidasPauseManager: pause delay to the fixed PAUSE_DELAY,
  * unpause delay to the value of the network config. Delays that already match
  * are skipped.
- * Both setters are timelocked (`DELAY_FOR_SET_DELAY`): the txs are scheduled
- * via the timelock manager and have to be executed after the delay
+ * Both setters are always timelocked (`DELAY_FOR_SET_DELAY`): the txs are
+ * always scheduled via the timelock manager, without the on-chain detection,
+ * and have to be executed after the delay
  */
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const addresses = getCurrentAddresses(hre);
@@ -59,7 +60,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
     console.log(`Setting ${name} delay: ${current} -> ${target}`);
 
-    await sendAndWaitForCustomTxSign(hre, await populate(), {
+    await sendAndWaitForTimelockedTxSign(hre, await populate(), {
       action: 'update-pause-manager',
       comment: `set ${name} delay to ${target}`,
     });

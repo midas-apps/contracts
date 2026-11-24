@@ -100,7 +100,7 @@ export const mXRPDeploymentConfig: DeploymentConfig = {
               paymentTokens: [
                 {
                   token: 'xrp',
-                  allowance: parseUnits('1000000000', 18),
+                  allowance: parseUnits('4113', 18),
                 },
               ],
               type: 'depositVault',
@@ -109,7 +109,7 @@ export const mXRPDeploymentConfig: DeploymentConfig = {
               paymentTokens: [
                 {
                   token: 'xrp',
-                  allowance: parseUnits('1000000000', 18),
+                  allowance: parseUnits('4113', 18),
                 },
               ],
               type: 'redemptionVault',

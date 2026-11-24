@@ -19,6 +19,7 @@ import {
   logDeployProxy,
   tryEtherscanVerifyImplementation,
 } from '../../../helpers/utils';
+import { MidasTimelockManager } from '../../../typechain-types';
 import { verifyReinitializersConsumed } from '../../upgrades/common/reinitializer';
 import { getDeploymentConfigForToken } from '../configs';
 
@@ -520,10 +521,12 @@ const getTimelockRequirement = async (
 };
 
 /**
- * Sends a tx via the custom signer. If the call requires a timelock for the
- * sender, it is wrapped into `MidasTimelockManager.scheduleTimelockOperation`
+ * Wraps the tx into `MidasTimelockManager.scheduleTimelockOperation` and sends
+ * it via the custom signer
  */
-export const sendAndWaitForCustomTxSign = async (
+const scheduleTimelockOperationTx = async (
+  timelockManager: MidasTimelockManager,
+  reason: string,
   ...args: Parameters<typeof sendAndWaitForCustomTxSignDirect>
 ) => {
   const [
@@ -534,31 +537,9 @@ export const sendAndWaitForCustomTxSign = async (
     confirmations,
   ] = args;
 
-  const safeCaller =
-    safeMiddlewareWallet &&
-    (await hre.ethers.provider.getCode(safeMiddlewareWallet)) !== '0x'
-      ? safeMiddlewareWallet
-      : undefined;
-
-  const proposer =
-    safeCaller ??
-    (await getWalletAddressForAction(
-      hre,
-      txSignMetadata?.action ?? '',
-      txSignMetadata?.mToken,
-    ));
-
-  const timelock = await getTimelockRequirement(hre, populatedTx, proposer);
-
-  if (!timelock) {
-    return sendAndWaitForCustomTxSignDirect(...args);
-  }
-
   if (populatedTx.value && !BigNumber.from(populatedTx.value).isZero()) {
     throw new Error('Timelocked operations do not support msg.value');
   }
-
-  const { timelockManager, role, delay } = timelock;
 
   const operationId = await timelockManager.getOperationId(
     populatedTx.to!,
@@ -566,7 +547,7 @@ export const sendAndWaitForCustomTxSign = async (
   );
 
   console.log(
-    `Tx to ${populatedTx.to} requires timelock (role: ${role}, delay: ${delay}s), scheduling via ${timelockManager.address}`,
+    `Tx to ${populatedTx.to} requires timelock (${reason}), scheduling via ${timelockManager.address}`,
   );
 
   const scheduleTx =
@@ -593,6 +574,73 @@ export const sendAndWaitForCustomTxSign = async (
   );
 
   return txId;
+};
+
+/**
+ * Sends a tx via the custom signer. If the call requires a timelock for the
+ * sender, it is wrapped into `MidasTimelockManager.scheduleTimelockOperation`
+ */
+export const sendAndWaitForCustomTxSign = async (
+  ...args: Parameters<typeof sendAndWaitForCustomTxSignDirect>
+) => {
+  const [hre, populatedTx, txSignMetadata, safeMiddlewareWallet] = args;
+
+  const safeCaller =
+    safeMiddlewareWallet &&
+    (await hre.ethers.provider.getCode(safeMiddlewareWallet)) !== '0x'
+      ? safeMiddlewareWallet
+      : undefined;
+
+  const proposer =
+    safeCaller ??
+    (await getWalletAddressForAction(
+      hre,
+      txSignMetadata?.action ?? '',
+      txSignMetadata?.mToken,
+    ));
+
+  const timelock = await getTimelockRequirement(hre, populatedTx, proposer);
+
+  if (!timelock) {
+    return sendAndWaitForCustomTxSignDirect(...args);
+  }
+
+  const { timelockManager, role, delay } = timelock;
+
+  return scheduleTimelockOperationTx(
+    timelockManager,
+    `role: ${role}, delay: ${delay}s`,
+    ...args,
+  );
+};
+
+/**
+ * Same as `sendAndWaitForCustomTxSign`, but for the calls that are always
+ * timelocked (constant override delay). Skips the on-chain detection, which
+ * sends the tx as is when the access control is not wired or the role is not
+ * granted yet, and always schedules via the timelock manager of the network
+ */
+export const sendAndWaitForTimelockedTxSign = async (
+  ...args: Parameters<typeof sendAndWaitForCustomTxSignDirect>
+) => {
+  const [hre] = args;
+
+  const timelockManagerAddress = getCurrentAddresses(hre)?.timelockManager;
+
+  if (!timelockManagerAddress) {
+    throw new Error('Timelock manager address is not set');
+  }
+
+  const timelockManager = await hre.ethers.getContractAt(
+    'MidasTimelockManager',
+    timelockManagerAddress,
+  );
+
+  return scheduleTimelockOperationTx(
+    timelockManager,
+    'always timelocked',
+    ...args,
+  );
 };
 
 export const toFunctionSelector = (signature: string) => {
