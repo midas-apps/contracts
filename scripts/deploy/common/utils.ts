@@ -25,95 +25,6 @@ import { MidasTimelockManager } from '../../../typechain-types';
 import { verifyReinitializersConsumed } from '../../upgrades/common/reinitializer';
 import { getDeploymentConfigForToken } from '../configs';
 
-const safeAbi = [
-  {
-    inputs: [],
-    name: 'domainSeparator',
-    outputs: [{ internalType: 'bytes32', name: '', type: 'bytes32' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [
-      { internalType: 'address', name: 'to', type: 'address' },
-      { internalType: 'uint256', name: 'value', type: 'uint256' },
-      { internalType: 'bytes', name: 'data', type: 'bytes' },
-      { internalType: 'enum Enum.Operation', name: 'operation', type: 'uint8' },
-      { internalType: 'uint256', name: 'safeTxGas', type: 'uint256' },
-      { internalType: 'uint256', name: 'baseGas', type: 'uint256' },
-      { internalType: 'uint256', name: 'gasPrice', type: 'uint256' },
-      { internalType: 'address', name: 'gasToken', type: 'address' },
-      { internalType: 'address', name: 'refundReceiver', type: 'address' },
-      { internalType: 'uint256', name: '_nonce', type: 'uint256' },
-    ],
-    name: 'encodeTransactionData',
-    outputs: [{ internalType: 'bytes', name: '', type: 'bytes' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [
-      { internalType: 'address', name: 'to', type: 'address' },
-      { internalType: 'uint256', name: 'value', type: 'uint256' },
-      { internalType: 'bytes', name: 'data', type: 'bytes' },
-      { internalType: 'enum Enum.Operation', name: 'operation', type: 'uint8' },
-      { internalType: 'uint256', name: 'safeTxGas', type: 'uint256' },
-      { internalType: 'uint256', name: 'baseGas', type: 'uint256' },
-      { internalType: 'uint256', name: 'gasPrice', type: 'uint256' },
-      { internalType: 'address', name: 'gasToken', type: 'address' },
-      {
-        internalType: 'address payable',
-        name: 'refundReceiver',
-        type: 'address',
-      },
-      { internalType: 'bytes', name: 'signatures', type: 'bytes' },
-    ],
-    name: 'execTransaction',
-    outputs: [{ internalType: 'bool', name: 'success', type: 'bool' }],
-    stateMutability: 'payable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      { internalType: 'address', name: 'to', type: 'address' },
-      { internalType: 'uint256', name: 'value', type: 'uint256' },
-      { internalType: 'bytes', name: 'data', type: 'bytes' },
-      { internalType: 'enum Enum.Operation', name: 'operation', type: 'uint8' },
-      { internalType: 'uint256', name: 'safeTxGas', type: 'uint256' },
-      { internalType: 'uint256', name: 'baseGas', type: 'uint256' },
-      { internalType: 'uint256', name: 'gasPrice', type: 'uint256' },
-      { internalType: 'address', name: 'gasToken', type: 'address' },
-      { internalType: 'address', name: 'refundReceiver', type: 'address' },
-      { internalType: 'uint256', name: '_nonce', type: 'uint256' },
-    ],
-    name: 'getTransactionHash',
-    outputs: [{ internalType: 'bytes32', name: '', type: 'bytes32' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [{ internalType: 'address', name: 'owner', type: 'address' }],
-    name: 'isOwner',
-    outputs: [{ internalType: 'bool', name: '', type: 'bool' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'nonce',
-    outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'getOwners',
-    outputs: [{ internalType: 'address[]', name: '', type: 'address[]' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-];
-
 export const executeFuncAsync = async <T>(
   hre: HardhatRuntimeEnvironment,
   func: (hre: HardhatRuntimeEnvironment) => Promise<T>,
@@ -387,66 +298,9 @@ const sendAndWaitForCustomTxSignDirect = async (
     /** on-chain fields changed by the tx, for the sync report. Not sent to the signer */
     changes?: FieldChange[];
   },
-  safeMiddlewareWallet?: string,
+  safe?: string,
   confirmations = 2,
 ) => {
-  if (safeMiddlewareWallet) {
-    const callerCode = await hre.ethers.provider.getCode(safeMiddlewareWallet);
-
-    const isCallerContract = callerCode !== '0x';
-
-    if (isCallerContract) {
-      console.log(
-        'Caller is a contract, assuming it is a safe contract to execute tx',
-      );
-
-      // we assume that the owner contract is a safe contract
-      const safeContract = await getContractAt(
-        hre,
-        safeAbi,
-        safeMiddlewareWallet,
-      );
-
-      const owners: string[] = await safeContract.getOwners();
-
-      const ownerForSignature = await getWalletAddressForAction(
-        hre,
-        txSignMetadata?.action ?? '',
-      );
-
-      if (
-        !owners.find((v) => v.toLowerCase() === ownerForSignature.toLowerCase())
-      ) {
-        throw new Error(
-          `Owner ${ownerForSignature} is not found in the safe contract, allowed callers: [${owners.join(
-            ', ',
-          )}]`,
-        );
-      }
-
-      populatedTx = await safeContract.populateTransaction.execTransaction(
-        populatedTx.to,
-        populatedTx.value ?? 0,
-        populatedTx.data,
-        0,
-        0,
-        0,
-        0,
-        constants.AddressZero,
-        constants.AddressZero,
-        // FIXME: for some reason, encode of 1 is required to be padded, so abi coder does not produce
-        // the required result with encode(['address', 'uint256'], [ownerForSignature, 1])
-        hre.ethers.utils.defaultAbiCoder.encode(
-          ['address'],
-          [ownerForSignature],
-        ) +
-          '000000000000000000000000000000000000000000000000000000000000000001',
-      );
-    } else {
-      console.warn('Safe wallet is passed but caller is not a contract');
-    }
-  }
-
   const hreNetwork: HardhatRuntimeEnvironment = hre;
 
   const networkCustomSigner = await hreNetwork.getCustomSigner();
@@ -454,20 +308,22 @@ const sendAndWaitForCustomTxSignDirect = async (
   const signerMetadata = { ...(txSignMetadata ?? {}) };
   delete signerMetadata.changes;
 
-  const sendResult = networkCustomSigner.sendTransaction(
-    {
-      data: populatedTx.data!,
-      to: populatedTx.to!,
-      value: populatedTx.value,
-    },
-    {
-      ...signerMetadata,
-      chainId: hreNetwork.network.config.chainId,
-      idempotenceId: txSignMetadata?.idempotenceId ?? hreNetwork.contextId,
-    },
-  );
+  const transaction = {
+    data: populatedTx.data!,
+    to: populatedTx.to!,
+    value: populatedTx.value,
+  };
 
-  const res = await sendResult;
+  const res = safe
+    ? await networkCustomSigner.proposeSafeTransaction(transaction, {
+        safe,
+        comment: txSignMetadata?.comment,
+      })
+    : await networkCustomSigner.sendTransaction(transaction, {
+        ...signerMetadata,
+        chainId: hreNetwork.network.config.chainId,
+        idempotenceId: txSignMetadata?.idempotenceId ?? hreNetwork.contextId,
+      });
 
   let resToReturn: unknown;
 
@@ -486,7 +342,7 @@ const sendAndWaitForCustomTxSignDirect = async (
   }
 
   logDeploy(
-    'Tx' + networkCustomSigner.type === 'customSigner' ? '' : ' Submitted',
+    'Tx' + (networkCustomSigner.type === 'customSigner' ? '' : ' Submitted'),
     hreNetwork.network.name,
     typeof resToReturn === 'object'
       ? JSON.stringify(resToReturn)
@@ -536,6 +392,21 @@ const getTimelockRequirement = async (
   return { timelockManager, role, delay };
 };
 
+/** `safeMiddlewareWallet` if it is a contract (assumed a Safe), else undefined */
+const getSafeCaller = async (
+  hre: HardhatRuntimeEnvironment,
+  safeMiddlewareWallet?: string,
+) => {
+  if (!safeMiddlewareWallet) return undefined;
+
+  if ((await hre.ethers.provider.getCode(safeMiddlewareWallet)) === '0x') {
+    console.warn('Safe wallet is passed but caller is not a contract');
+    return undefined;
+  }
+
+  return safeMiddlewareWallet;
+};
+
 /**
  * Wraps the tx into `MidasTimelockManager.scheduleTimelockOperation` and sends
  * it via the custom signer
@@ -552,6 +423,8 @@ const scheduleTimelockOperationTx = async (
     safeMiddlewareWallet,
     confirmations,
   ] = args;
+
+  const safeCaller = await getSafeCaller(hre, safeMiddlewareWallet);
 
   if (populatedTx.value && !BigNumber.from(populatedTx.value).isZero()) {
     throw new Error('Timelocked operations do not support msg.value');
@@ -579,7 +452,7 @@ const scheduleTimelockOperationTx = async (
       ...txSignMetadata,
       comment: `[timelock schedule] ${txSignMetadata?.comment ?? ''}`,
     },
-    safeMiddlewareWallet,
+    safeCaller,
     confirmations,
   );
 
@@ -642,7 +515,13 @@ export const logSkipped = (reason: string) => {
 export const sendAndWaitForCustomTxSign = async (
   ...args: Parameters<typeof sendAndWaitForCustomTxSignDirect>
 ) => {
-  const [hre, populatedTx, txSignMetadata, safeMiddlewareWallet] = args;
+  const [
+    hre,
+    populatedTx,
+    txSignMetadata,
+    safeMiddlewareWallet,
+    confirmations,
+  ] = args;
 
   if (
     recordTx({
@@ -654,11 +533,7 @@ export const sendAndWaitForCustomTxSign = async (
     return 'planned';
   }
 
-  const safeCaller =
-    safeMiddlewareWallet &&
-    (await hre.ethers.provider.getCode(safeMiddlewareWallet)) !== '0x'
-      ? safeMiddlewareWallet
-      : undefined;
+  const safeCaller = await getSafeCaller(hre, safeMiddlewareWallet);
 
   const proposer =
     safeCaller ??
@@ -671,7 +546,13 @@ export const sendAndWaitForCustomTxSign = async (
   const timelock = await getTimelockRequirement(hre, populatedTx, proposer);
 
   if (!timelock) {
-    return sendAndWaitForCustomTxSignDirect(...args);
+    return sendAndWaitForCustomTxSignDirect(
+      hre,
+      populatedTx,
+      txSignMetadata,
+      safeCaller,
+      confirmations,
+    );
   }
 
   const { timelockManager, role, delay } = timelock;
@@ -679,7 +560,11 @@ export const sendAndWaitForCustomTxSign = async (
   return scheduleTimelockOperationTx(
     timelockManager,
     `role: ${role}, delay: ${delay}s`,
-    ...args,
+    hre,
+    populatedTx,
+    txSignMetadata,
+    safeCaller,
+    confirmations,
   );
 };
 
