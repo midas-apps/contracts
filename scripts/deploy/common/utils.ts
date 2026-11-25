@@ -542,7 +542,8 @@ const sendAndWaitForCustomTxSignDirect = async (
       | 'set-prefer-loan-liquidity'
       | 'set-mtoken-deposits-enabled'
       | 'set-ustb-deposits-enabled'
-      | 'set-user-facing-roles';
+      | 'set-user-facing-roles'
+      | 'set-function-permissions';
   },
   safeMiddlewareWallet?: string,
   confirmations = 2,

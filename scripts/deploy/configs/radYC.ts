@@ -1,4 +1,7 @@
-import { minutes } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
+import {
+  days,
+  minutes,
+} from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
 import { parseUnits } from 'ethers/lib/utils';
 
 import { chainIds } from '../../../config';
@@ -31,33 +34,25 @@ export const radYCDeploymentConfig: DeploymentConfig = {
   },
   networkConfigs: {
     [chainIds.arc]: {
-      dv: {
-        type: 'REGULAR',
+      dvUsyc: {
+        type: 'USYC',
+        version: 'v2',
         enableSanctionsList: false,
-        feeReceiver: '0xfD1E38A01c581119030596e3D85D581bB03b1893',
-        tokensReceiver: '0xe8ba9F9990402C0418BECaD66e6437d446Ff238F',
-        instantDailyLimit: parseUnits('10000'),
+        tokensReceiver: 'redemptionVaultUsyc',
         instantFee: 0,
         variationTolerance: 20,
         minAmount: 0,
         minMTokenAmountForFirstDeposit: 0,
-        maxSupplyCap: parseUnits('50000'),
       },
-      rvSwapper: {
-        type: 'SWAPPER',
-        enableSanctionsList: false,
-        feeReceiver: '0xfD1E38A01c581119030596e3D85D581bB03b1893',
+      rvUsyc: {
+        type: 'USYC',
+        version: 'v2',
         tokensReceiver: '0xe8ba9F9990402C0418BECaD66e6437d446Ff238F',
         requestRedeemer: '0xEC8f02f1D082b00c92805f0Dca5D1d5a91983986',
-        // ticket: 0, contracts require > 0; instant redeem stays paused
-        instantDailyLimit: 1,
         instantFee: 0,
         variationTolerance: 20,
         minAmount: 0,
-        fiatFlatFee: parseUnits('30'),
-        fiatAdditionalFee: 10,
-        liquidityProvider: 'dummy',
-        swapperVault: 'dummy',
+        depositVault: { mToken: 'radUSD', depositVaultType: 'depositVault' },
       },
       postDeploy: {
         addPaymentTokens: {
@@ -74,7 +69,7 @@ export const radYCDeploymentConfig: DeploymentConfig = {
               ],
             },
             {
-              type: 'redemptionVaultSwapper',
+              type: 'redemptionVaultUsyc',
               paymentTokens: [
                 {
                   token: 'radusd',
@@ -92,35 +87,51 @@ export const radYCDeploymentConfig: DeploymentConfig = {
           oracleManagerAddress: '0xc6Cf625a84B4336577801F01D095c8642f6cEC32',
           extraRoles: [
             {
+              // manager
               address: '0x7fb58f658CAfF2A778303D31C1b9Bde59Ed2Ae90',
-              roles: ['minter', 'burner'],
+              roles: [
+                {
+                  role: 'RAD_YC_AUTOMATION_ADMIN_ROLE',
+                  delay: days(1),
+                },
+              ],
+            },
+          ],
+          functionPermissions: [
+            {
+              // operator
+              address: '0xF6a3DC5d31aE73eD19265311283790238765aF6E',
+              contracts: ['dataFeedDv', 'dataFeedRv'],
+              functions: [
+                {
+                  signature: 'setMinMaxExpectedAnswer(int256,int256)',
+                  delay: minutes(30),
+                },
+              ],
             },
             {
-              address: '0xF270EDf3A35829F734c35F7E7d99292f78864ef2',
-              roles: ['depositVaultAdmin', 'redemptionVaultAdmin'],
-            },
-            {
-              address: '0x8a892CBfE74e483e3002F36E2fC8903a055a6972',
-              roles: ['customFeedAdmin'],
+              // manager
+              address: '0x7fb58f658CAfF2A778303D31C1b9Bde59Ed2Ae90',
+              contracts: ['dataFeedDv', 'dataFeedRv'],
+              functions: [
+                { signature: 'changeAggregator(address)', delay: days(1) },
+              ],
             },
           ],
         },
+        addFeeWaived: [
+          {
+            fromVault: { mToken: 'radUSD', type: 'depositVault' },
+            toWaive: [{ type: 'redemptionVaultUsyc' }],
+          },
+          {
+            fromVault: { mToken: 'radUSD', type: 'redemptionVault' },
+            toWaive: [{ type: 'depositVaultUsyc' }],
+          },
+        ],
+        greenlist: { depositVault: true, redemptionVault: true },
         setRoundDataDv: { data: 114000000 },
         setRoundDataRv: { data: 114000000 },
-        greenlist: { depositVault: true, redemptionVaultSwapper: true },
-        pauseFunctions: {
-          depositVault: [
-            'depositRequest',
-            'depositRequestWithCustomRecipient',
-            'depositInstantWithCustomRecipient',
-          ],
-          redemptionVaultSwapper: [
-            'redeemFiatRequest',
-            'redeemInstantWithCustomRecipient',
-            'redeemInstant',
-            'redeemRequestWithCustomRecipient',
-          ],
-        },
       },
     },
     [chainIds.sepolia]: {

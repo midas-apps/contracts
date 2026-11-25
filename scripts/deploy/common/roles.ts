@@ -5,6 +5,7 @@ import {
   getContractAt,
   getDeployer,
   sendAndWaitForCustomTxSign,
+  toFunctionSelector,
 } from './utils';
 import {
   defaultDepositVaultPriority,
@@ -15,6 +16,7 @@ import {
 import { MTokenName } from '../../../config';
 import {
   getCurrentAddresses,
+  TokenFeedAddresses,
   VaultType,
 } from '../../../config/constants/addresses';
 import { getCommonContractNames } from '../../../helpers/contracts';
@@ -49,6 +51,12 @@ export type GrantAllTokenRolesConfig = {
         }[];
   }[];
   minBalanceExemptAddresses?: (Address | VaultType)[];
+  // function permissions under the target's contract admin role
+  functionPermissions?: {
+    address: Address;
+    contracts: (keyof TokenFeedAddresses | VaultType)[];
+    functions: { signature: string; delay: number }[];
+  }[];
 };
 
 const acAdminAddress = '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227';
@@ -231,31 +239,114 @@ export const grantAllProductRoles = async (
 
   if (rolesToGrant.length === 0) {
     console.log(`${token}: all product roles already granted — skip`);
+  } else {
+    const alreadyHeld = roleBatch.length - rolesToGrant.length;
+    console.log(
+      alreadyHeld > 0
+        ? `${token}: grant ${rolesToGrant.length} missing (${alreadyHeld}/${roleBatch.length} already held)`
+        : `${token}: grant ${rolesToGrant.length} missing`,
+    );
+
+    await sendAndWaitForCustomTxSign(
+      hre,
+      await accessControl.populateTransaction.grantRoleMult(
+        rolesToGrant.map((role, index) => ({
+          role: parseRole(role).role,
+          account: addressesToGrant[index],
+          delay: parseRole(role).delay,
+        })),
+      ),
+      {
+        action: 'update-ac',
+        subAction: 'grant-token-roles',
+        comment: `grant all ${token} roles`,
+      },
+    );
+  }
+
+  await setProductFunctionPermissions(
+    hre,
+    accessControl,
+    token,
+    managerGrantConfig?.functionPermissions ?? [],
+  );
+};
+
+const setProductFunctionPermissions = async (
+  hre: HardhatRuntimeEnvironment,
+  accessControl: MidasAccessControl,
+  token: MTokenName,
+  permissions: NonNullable<GrantAllTokenRolesConfig['functionPermissions']>,
+) => {
+  if (!permissions.length) return;
+
+  const deployedAddresses = getDeploymentTokenAddresses(
+    getCurrentAddresses(hre)![token]!,
+    token,
+    hre.deploymentConfig,
+  );
+
+  const paramsByTarget = new Map<
+    string,
+    {
+      functionSelector: string;
+      account: string;
+      delay: number;
+      enabled: boolean;
+    }[]
+  >();
+
+  for (const { address, contracts, functions } of permissions) {
+    for (const reference of contracts) {
+      const target = deployedAddresses[reference];
+      if (!target) {
+        throw new Error(`Permission target ${token}.${reference} is not set`);
+      }
+
+      const masterRole = await (
+        await getContractAt(hre, 'IMidasAccessControlManaged', target)
+      ).contractAdminRole();
+
+      for (const { signature, delay } of functions) {
+        const functionSelector = toFunctionSelector(signature);
+
+        if (
+          await accessControl[
+            'hasFunctionPermission(bytes32,address,bytes4,address)'
+          ](masterRole, target, functionSelector, address)
+        ) {
+          continue;
+        }
+
+        console.log(
+          `${token}.${reference}: permit ${signature} to ${address} (delay ${delay})`,
+        );
+        paramsByTarget.set(target, [
+          ...(paramsByTarget.get(target) ?? []),
+          { functionSelector, account: address, delay, enabled: true },
+        ]);
+      }
+    }
+  }
+
+  if (!paramsByTarget.size) {
+    console.log(`${token}: all function permissions already set — skip`);
     return;
   }
 
-  const alreadyHeld = roleBatch.length - rolesToGrant.length;
-  console.log(
-    alreadyHeld > 0
-      ? `${token}: grant ${rolesToGrant.length} missing (${alreadyHeld}/${roleBatch.length} already held)`
-      : `${token}: grant ${rolesToGrant.length} missing`,
-  );
-
-  await sendAndWaitForCustomTxSign(
-    hre,
-    await accessControl.populateTransaction.grantRoleMult(
-      rolesToGrant.map((role, index) => ({
-        role: parseRole(role).role,
-        account: addressesToGrant[index],
-        delay: parseRole(role).delay,
-      })),
-    ),
-    {
-      action: 'update-ac',
-      subAction: 'grant-token-roles',
-      comment: `grant all ${token} roles`,
-    },
-  );
+  for (const [target, params] of paramsByTarget) {
+    await sendAndWaitForCustomTxSign(
+      hre,
+      await accessControl.populateTransaction[
+        'setPermissionRoleMult(address,(bytes4,address,uint32,bool)[])'
+      ](target, params),
+      {
+        action: 'update-ac',
+        subAction: 'set-function-permissions',
+        comment: `set ${token} function permissions on ${target}`,
+      },
+    );
+  }
 };
 
 export const revokeDefaultRolesFromDeployer = async (
