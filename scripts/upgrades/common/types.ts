@@ -92,12 +92,15 @@ export type ContractsUpgradeConfig = {
   timelockManager?: ContractUpgradeEntry;
   mTokens?: {
     // applied to every mToken that has the key's address configured.
-    // per-mToken override entries are merged on top of the `all` entry
+    // per-mToken override entries are merged on top of the `all` entry.
+    // `true` - every contract of the mToken that has an address (`all`
+    // entries are used for the keys that have them, `false` ones stay
+    // excluded), `false` - excluded
     all?: Partial<Record<MTokenUpgradeKey, ContractUpgradeEntry>>;
     overrides?: Partial<
       Record<
         MTokenName,
-        Partial<Record<MTokenUpgradeKey, ContractUpgradeEntry>> | false
+        Partial<Record<MTokenUpgradeKey, ContractUpgradeEntry>> | boolean
       >
     >;
   };
@@ -105,12 +108,14 @@ export type ContractsUpgradeConfig = {
     // applied to every payment token that has the key's address configured.
     // `*Aggregator` keys resolved from here are skipped if the aggregator is
     // not a Midas contract (third party feed).
-    // per-payment token override entries are merged on top of the `all` entry
+    // per-payment token override entries are merged on top of the `all` entry.
+    // `true` - every contract of the payment token that has an address,
+    // `false` - excluded
     all?: Partial<Record<PaymentTokenUpgradeKey, ContractUpgradeEntry>>;
     overrides?: Partial<
       Record<
         PaymentTokenName,
-        Partial<Record<PaymentTokenUpgradeKey, ContractUpgradeEntry>> | false
+        Partial<Record<PaymentTokenUpgradeKey, ContractUpgradeEntry>> | boolean
       >
     >;
   };

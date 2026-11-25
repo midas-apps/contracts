@@ -127,6 +127,30 @@ yarn deploy:post:grant:admin --network <network>
 yarn deploy:post:revoke:roles --network <network>
 ```
 
+To grant the v2 network roles to the default accounts (the same for all the networks, hardcoded in `scripts/deploy/common/roles.ts`): pause admin (`PAUSE_ADMIN_ROLE` of the pause manager), timelock challenger (can pause pending timelock operations) and timelock executor (can execute timelock operations):
+
+```bash
+yarn deploy:post:grant:v2-network-roles --network <network>
+```
+
+To set the delays of an already deployed pause manager: the pause delay to the fixed `PAUSE_DELAY` (not configurable, the same for all the networks) and the unpause delay to the `pauseManager.unpauseDelay` value of the network config. The sender needs `PAUSE_ADMIN_ROLE`; both setters have a fixed 2 days timelock, so the txs are scheduled via the timelock manager and have to be executed after the delay:
+
+```bash
+yarn deploy:post:set:pause-delays --network <network>
+```
+
+To revoke the minter / burner roles from the v1 vaults of an mToken (`--mtoken` is required):
+
+```bash
+yarn deploy:post:revoke:v1-vault-roles --network <network> --mtoken <mtoken>
+```
+
+To revoke the legacy (v1) roles of an mToken that are replaced in v2 (`--mtoken` is required, v2 access control only). For now it revokes the legacy pauser role (`<PREFIX>_PAUSE_OPERATOR_ROLE`) from `postDeploy.grantRoles.tokenManagerAddress` of the mToken deployment config, once that address holds the token manager role:
+
+```bash
+yarn deploy:post:revoke:legacy-roles --network <network> --mtoken <mtoken>
+```
+
 #### If deploying to an existing network
 
 For each command below, include `--network` and `--mtoken`:
@@ -237,11 +261,17 @@ Both vault versions (add `--vault-version <v1|v2>`):
 - `yarn deploy:post:set:sanctionsList`: set the network sanctions list on vaults
 - `yarn deploy:post:set:aaveconfig` / `yarn deploy:post:set:morphoconfig`: Aave / Morpho vault settings
 - `yarn deploy:post:add:addressbook`: add product addresses to the address book
+- `yarn deploy:post:add:addressbook:network`: add the network level contracts (access control, pause manager, AC timelock manager, AC timelock controller) to the address book as `<Contract> - <Network>`, restricted to the network chain. No `--mtoken` / `--vault-version`; `--keys accessControl,pauseManager,timelockManager,timelockController` limits it to the listed contracts. An existing record of the same address with another name or chains gets an update proposal (name and chain restriction; groups can only be changed in the Fordefi console)
 
 v2 vaults only:
 
+- `yarn deploy:format-log [LOG_PATH] [--print]`: format the log of a deploy / post-deploy run (latest `logs/log-*.log` by default) into a Linear-ready list of txs with the Fordefi tx id and the timelock operation id of timelocked txs, copied to the clipboard
+- `yarn deploy:post:sync`: sync the whole product config of the network with on-chain state in one run. Runs the post-deploy steps below (roles, vault settings, payment tokens, fee waived, greenlist, limits, token config, feed settings, expected answers, pauses) with sending replaced by recording, merges bulk calls from the same wallet (`grantRoleMult`, `revokeRoleMult`, `bulkPauseContract`, `bulkPauseContractFn`), then sends. Nothing is sent if a step fails. `--dry-run true` only prints the txs. Not synced: `setRoundData`, `set:sanctionsList`, LayerZero, Axelar. To sync a new setting, add it to an existing step or add a step to `syncSteps` in `post-deploy/sync_MToken.ts`
+- `yarn deploy:post:set:feed-settings`: sync mToken feeds with `genericConfigs`: custom aggregators (`customAggregator`, `customAggregatorDv/Rv`: min/max answer, max answer deviation, growth APR bounds and `onlyUp`) and data feeds (`healthyDiff`). Only fields set in the config are synced; expected answers are synced by `set:expected-answers`
+- `yarn deploy:post:set:vaultsettings`: sync the settings of deployed vaults with their deploy config (`dv`, `rv`, ...): min amount, instant fee and its bounds, max instant share, variation tolerance, max approve request id, sequential request processing, tokens receiver, sanctions list, DV min first deposit and max amount per request, RV request redeemer. Only fields set in the config are synced
 - `yarn deploy:post:set:waived`: waive vault fee for an address (`addFeeWaived`)
 - `yarn deploy:post:pause:functions`: pause selected vault functions via the pause manager (`pauseFunctions`)
+- `yarn deploy:post:pause:contracts`: pause whole vaults via the pause manager (`pauseContracts`)
 - `yarn deploy:post:set:instantlimits`: instant operation rate limit windows (`instantLimits`)
 - `yarn deploy:post:set:mintratelimits`: mToken mint rate limit buckets and wallet buckets (`mintRateLimits`)
 - `yarn deploy:post:set:tokenconfig`: mToken max supply cap and clawback receiver (`tokenConfig`)
@@ -253,6 +283,8 @@ v2 vaults only:
 
 Network level (no `--mtoken`):
 
+- `yarn deploy:post:sync:network`: sync the network level contracts with `network-configs.ts` and the network roles in one run, the same way as `deploy:post:sync` (`--dry-run true` only prints the table). Runs `wire:ac`, `grant:v2-network-roles`, `set:userfacingroles`, `set:pause-delays` and `set:network-settings`. Not synced: `grant:admin`, `revoke:roles`, `transfer:proxyadmin` (deployer one-offs)
+- `yarn deploy:post:set:network-settings`: access control default delay (always timelocked) and timelock manager max pending operations per proposer. The security council and the timelock min delay are only compared, mismatches are reported as skipped
 - `yarn deploy:post:set:userfacingroles`: mark all greenlisted and min balance exempt roles as user facing on access control
 
 ## Troubleshooting

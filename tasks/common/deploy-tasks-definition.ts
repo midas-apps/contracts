@@ -3,6 +3,7 @@ import path from 'node:path';
 import {
   actionParam,
   aggregatorTypeParam,
+  dryRunParam,
   feedTargetParam,
   keysParam,
   libParam,
@@ -34,6 +35,9 @@ const upgrade = (file: string) => path.join('scripts/upgrades', `${file}.ts`);
 const deployTasksRecord: Record<string, DeploymentTask> = {
   // Core deploy
   'deploy:ac': [deploy('deploy_AccessControl')],
+  'deploy:pausemanager': [deploy('deploy_PauseManager')],
+  'deploy:timelock:manager': [deploy('deploy_TimelockManager')],
+  'deploy:timelock:controller': [deploy('deploy_TimelockController')],
   'deploy:timelock': [deploy('deploy_TimeLock'), skipValidationParam(true)],
   'deploy:token': [deploy('deploy_Token'), mTokenParam()],
   'deploy:library': [deploy('deploy_Library'), libParam()],
@@ -139,6 +143,11 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
   ],
 
   // Post-deploy
+  'deploy:post:wire:ac': [deployPost('wire_AccessControl')],
+  'deploy:post:set:pause-delays': [deployPost('set_PauseDelays')],
+  'deploy:post:set:network-settings': [deployPost('set_NetworkSettings')],
+  // params are passed to the script in this order: (hre, dryRun)
+  'deploy:post:sync:network': [deployPost('sync_Network'), dryRunParam()],
   'deploy:post:add:ptokens': [
     deployPost('add_PaymentTokens'),
     mTokenParam(),
@@ -150,7 +159,16 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
     vaultVersionParam(),
   ],
   'deploy:post:grant:admin': [deployPost('grant_DefaultAdminRole')],
+  'deploy:post:grant:v2-network-roles': [deployPost('grant_V2NetworkRoles')],
   'deploy:post:revoke:roles': [deployPost('revoke_DeployerRoles')],
+  'deploy:post:revoke:v1-vault-roles': [
+    deployPost('revoke_V1VaultRoles'),
+    mTokenParam(),
+  ],
+  'deploy:post:revoke:legacy-roles': [
+    deployPost('revoke_LegacyRoles'),
+    mTokenParam(),
+  ],
   'deploy:post:transfer:proxyadmin': [
     deployPost('transfer_ProxyAdminToTimelock'),
   ],
@@ -165,6 +183,10 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
     mTokenParam(true),
     pTokenParam(true),
     aggregatorTypeParam(true),
+  ],
+  'deploy:post:set:feed-settings': [
+    deployPost('set_FeedSettings'),
+    mTokenParam(),
   ],
   'deploy:post:set:waived': [
     deployPost('add_FeeWaived'),
@@ -181,11 +203,20 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
     mTokenParam(),
     v2VaultsOnlyParam(),
   ],
+  'deploy:post:pause:contracts': [
+    deployPost('pause_Contracts'),
+    mTokenParam(),
+    v2VaultsOnlyParam(),
+  ],
   'deploy:post:add:addressbook': [
     deployPost('add_ToAddressBook'),
     mTokenParam(),
     keysParam(true),
     vaultVersionParam(),
+  ],
+  'deploy:post:add:addressbook:network': [
+    deployPost('add_NetworkToAddressBook'),
+    keysParam(true),
   ],
   'deploy:post:set:sanctionsList': [
     deployPost('set_SanctionsList'),
@@ -214,6 +245,18 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
   ],
 
   // v2 only
+  // params are passed to the script in this order: (hre, mToken, dryRun)
+  'deploy:post:sync': [
+    deployPost('sync_MToken'),
+    mTokenParam(),
+    dryRunParam(),
+    v2VaultsOnlyParam(),
+  ],
+  'deploy:post:set:vaultsettings': [
+    deployPost('set_VaultSettings'),
+    mTokenParam(),
+    v2VaultsOnlyParam(),
+  ],
   'deploy:post:set:instantlimits': [
     deployPost('set_InstantLimits'),
     mTokenParam(),

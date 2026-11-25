@@ -37,6 +37,7 @@ import {
   DeployRvUsycConfig,
 } from './rv';
 import { DeployTimelockConfig } from './timelock';
+import type { DeployTokenConfig } from './token';
 import { toFunctionSelector } from './utils';
 import type {
   FreeFromMinAmountConfig,
@@ -49,7 +50,7 @@ import type {
 } from './v2-post-deploy';
 
 import { PartialConfigPerNetwork, PaymentTokenName } from '../../../config';
-import { VaultType } from '../../../config/constants/addresses';
+import { V2VaultType, VaultType } from '../../../config/constants/addresses';
 import { RateLimiter } from '../../../typechain-types';
 
 const VAULT_FUNCTION_SIGNATURES = {
@@ -115,6 +116,8 @@ export type PostDeployConfig = {
   addFeeWaived?: AddFeeWaivedConfig;
   greenlist?: GreenlistConfig;
   pauseFunctions?: PauseFunctionsConfig;
+  /** v2 vaults to pause as a whole (all functions) */
+  pauseContracts?: V2VaultType[];
   layerZero?: LayerZeroConfig;
   axelarIts?: AxelarItsConfig;
   setAaveConfig?: SetAaveConfigConfig;
@@ -170,6 +173,7 @@ export type DeploymentConfig = {
       rvMToken?: DeployRvMTokenConfig;
       rvUstb?: DeployRvUstbConfig;
       rvUsyc?: DeployRvUsycConfig;
+      token?: DeployTokenConfig;
       postDeploy?: PostDeployConfig;
     }
   >;
@@ -198,11 +202,18 @@ export type PaymentTokenDeploymentConfig = {
   >;
 };
 
+/** Default mToken clawback receiver, shared by all mTokens on all networks */
+export const DEFAULT_CLAWBACK_RECEIVER =
+  '0xD0cc216d848dbFC1b083031A7486d0CAdaf4EcDa' as const;
+
 /** `type(uint32).max`: disables the delay (see MidasAuthLibrary.NO_DELAY) */
 export const NO_DELAY = 0xffffffff;
 
 /** `0`: no override, falls back to the role/default delay (see MidasAuthLibrary.NULL_DELAY) */
 export const NULL_DELAY = 0;
+
+/** pause delay of MidasPauseManager, the same for all the networks: pausing is instant */
+export const PAUSE_DELAY = NO_DELAY;
 
 export type NetworkDeploymentConfig = Record<
   number,
@@ -216,7 +227,7 @@ export type NetworkDeploymentConfig = Record<
     pauseManager?: {
       /**
        * in seconds, or NO_DELAY.
-       * pause delay is not configurable and is always deployed as NULL_DELAY
+       * pause delay is not configurable and is always PAUSE_DELAY
        */
       unpauseDelay: number;
     };

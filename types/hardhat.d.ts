@@ -12,6 +12,16 @@ import type { DeploymentConfigName } from '../scripts/deploy/configs/deployment-
 
 import 'hardhat/types/runtime';
 
+type CustomSignerTransaction = {
+  data: string;
+  to: string;
+  value?: BigNumberish;
+};
+
+type CustomSignerResult =
+  | { type: 'hardhatSigner'; tx: TransactionResponse }
+  | { type: 'customSigner'; payload: unknown };
+
 declare module 'hardhat/types/runtime' {
   export interface HardhatRuntimeEnvironment {
     mtoken?: MTokenName;
@@ -49,14 +59,14 @@ declare module 'hardhat/types/runtime' {
         address: string;
         contractName: string;
         contractTag?: string;
+        /**
+         * propose an update of the name / chains of an existing record of
+         * the address if they differ, instead of skipping it
+         */
+        updateExisting?: boolean;
       }) => Promise<{ payload: unknown }>;
       sendTransaction: (
-        transaction: {
-          data: string;
-          to: string;
-          value?: BigNumberish;
-          gasLimit?: number;
-        },
+        transaction: CustomSignerTransaction & { gasLimit?: number },
         txSignMetadata?: {
           comment?: string;
           action?: string;
@@ -65,10 +75,15 @@ declare module 'hardhat/types/runtime' {
           chainId?: number;
           idempotenceId?: string;
         },
-      ) => Promise<
-        | { type: 'hardhatSigner'; tx: TransactionResponse }
-        | { type: 'customSigner'; payload: unknown }
-      >;
+      ) => Promise<CustomSignerResult>;
+      /**
+       * customSigner: creates a Safe proposal in backoffice.
+       * hardhatSigner: the deployer executes it through a 1-of-1 Safe immediately
+       */
+      proposeSafeTransaction: (
+        transaction: CustomSignerTransaction,
+        metadata: { safe: string; comment?: string },
+      ) => Promise<CustomSignerResult>;
     }>;
   }
 }

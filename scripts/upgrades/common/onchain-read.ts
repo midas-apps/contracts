@@ -19,7 +19,7 @@ export const RPC_CONCURRENCY = 4;
  * contract. ethers reports every failed eth_call as CALL_EXCEPTION, so the
  * decision is made on the underlying node error when there is one
  */
-const isRevertError = (e: unknown) => {
+export const isRevertError = (e: unknown) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const err = e as any;
   const nodeErrors = [err?.error, err?.error?.error].filter(Boolean);
@@ -32,7 +32,7 @@ const isRevertError = (e: unknown) => {
 };
 
 // node error if there is one: ethers error of a failed eth_call is the calldata dump
-const describeRpcError = (e: unknown) => {
+export const describeRpcError = (e: unknown) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const err = e as any;
   const nodeError = err?.error?.error ?? err?.error;

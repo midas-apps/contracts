@@ -1,3 +1,5 @@
+import { hours } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
+
 import { chainIds } from '../../../config';
 import { DAY } from '../../../helpers/utils';
 import { NetworkDeploymentConfig } from '../common/types';
@@ -10,6 +12,24 @@ export const networkDeploymentConfigs: NetworkDeploymentConfig = {
     timelock: {
       minDelay: 2 * DAY,
       proposer: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+    },
+    accessControl: {
+      defaultDelay: 0,
+    },
+    pauseManager: {
+      unpauseDelay: hours(12),
+    },
+    timelockManager: {
+      maxPendingOperationsPerProposer: 100,
+      securityCouncil: [
+        '0xC58C9f3061Ef2705a8b5355A623E1c7b9D1c570A',
+        '0x19C1eB6DD1ED16706A35f36B2Cc80ecE744a721d',
+        '0x1d824a6654E643b6cD4a87b9b06AE765C23005d6',
+        '0xf651032419e3a19A3f8B1A350427b94356C86Bf4',
+        '0x64559a12dCd3754d1e04B1F78bBCC0365f6a3066',
+        '0x1C13a564376E06bbB2B8ED8748F2E843a4D74bDC',
+        '0x2F28daf8e8d4B0192ff7AFD9f6a31a77e186F6A2',
+      ],
     },
   },
   [chainIds.sepolia]: {
@@ -146,6 +166,24 @@ export const networkDeploymentConfigs: NetworkDeploymentConfig = {
     timelock: {
       minDelay: 2 * DAY,
       proposer: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+    },
+    accessControl: {
+      defaultDelay: 0,
+    },
+    pauseManager: {
+      unpauseDelay: hours(3),
+    },
+    timelockManager: {
+      maxPendingOperationsPerProposer: 100,
+      securityCouncil: [
+        '0xC58C9f3061Ef2705a8b5355A623E1c7b9D1c570A',
+        '0x19C1eB6DD1ED16706A35f36B2Cc80ecE744a721d',
+        '0x1d824a6654E643b6cD4a87b9b06AE765C23005d6',
+        '0xf651032419e3a19A3f8B1A350427b94356C86Bf4',
+        '0x64559a12dCd3754d1e04B1F78bBCC0365f6a3066',
+        '0x1C13a564376E06bbB2B8ED8748F2E843a4D74bDC',
+        '0x2F28daf8e8d4B0192ff7AFD9f6a31a77e186F6A2',
+      ],
     },
   },
   [chainIds.scroll]: {

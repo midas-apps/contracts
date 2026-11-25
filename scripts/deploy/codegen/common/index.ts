@@ -408,6 +408,13 @@ export const generateDeploymentConfig = async (
       const config = await configsPerNetworkConfig[configKey](hre);
       deploymentConfig.networkConfig[configKey] = config;
     }
+
+    if (!existingVaultConfigKeys.includes('token')) {
+      const tokenConfig = await configsPerNetworkConfig.token(hre);
+      if (Object.keys(tokenConfig).length > 0) {
+        deploymentConfig.networkConfig.token = tokenConfig;
+      }
+    }
   } else {
     await stream.warn(
       `Skip is selected, network vault configs are left untouched...`,

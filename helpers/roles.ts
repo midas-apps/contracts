@@ -149,7 +149,15 @@ export const customGreenlistRoleNames: Partial<Record<MTokenName, string>> = {
   radUSD: 'RADIAL_GREENLISTED_ROLE',
 };
 
+/**
+ * Greenlist role of a product: the common `GREENLISTED_ROLE` unless the
+ * product is listed in `tokenLevelGreenlistTokens`
+ */
 const getGreenlistRoleName = (token: MTokenName): string => {
+  if (!tokenLevelGreenlistTokens.includes(token)) {
+    return getRolesNamesCommon().greenlisted;
+  }
+
   const greenlistToken = sharedGreenlistRoleSource[token] ?? token;
   if (customGreenlistRoleNames[greenlistToken]) {
     return customGreenlistRoleNames[greenlistToken]!;
@@ -250,6 +258,27 @@ export const getRolesForToken = (token: MTokenName): TokenRoles => {
   return getRolesHashes(rolesNames) as TokenRoles;
 };
 
+/**
+ * v1 product roles that have no use in v2. Kept out of `TokenRoles` so they
+ * are never granted, dumped or passed to the contracts
+ */
+type LegacyTokenRoles = {
+  /** replaced by the token manager role */
+  pauser: string;
+};
+
+export const getLegacyRolesNamesForToken = (
+  token: MTokenName,
+): LegacyTokenRoles => {
+  return {
+    pauser: `${prefixes[token]}_PAUSE_OPERATOR_ROLE`,
+  };
+};
+
+export const getLegacyRolesForToken = (token: MTokenName): LegacyTokenRoles => {
+  return getRolesHashes(getLegacyRolesNamesForToken(token)) as LegacyTokenRoles;
+};
+
 export const getRolesNamesIntegration = (): IntegrationRoles => {
   return {
     infinifiMGCustomFeedAdmin: 'INFINIFI_MG_CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE',
@@ -289,21 +318,23 @@ export const getAllRoles = (): AllRoles => {
 };
 
 /**
- * Roles that must be marked as user facing on MidasAccessControl: every
- * product greenlisted role and every min balance exempt role (plus the
- * common greenlisted role). Derived from the generated role registry, so it
- * is the same on every network.
+ * Roles that must be marked as user facing on MidasAccessControl on top of the
+ * ones `initializeV2` always sets (common GREENLISTED_ROLE and BLACKLISTED_ROLE):
+ * the greenlisted roles of the `tokenLevelGreenlistTokens` products and every
+ * min balance exempt role. Derived from the generated role registry, so it is
+ * the same on every network.
  */
 export const getAllUserFacingRoles = (): string[] => {
   const { common, tokenRoles } = getAllRoles();
 
+  const setByInitializer = new Set([common.greenlisted, common.blacklisted]);
+
   return [
-    ...new Set([
-      common.greenlisted,
-      ...Object.values(tokenRoles).flatMap((roles) => [
+    ...new Set(
+      Object.values(tokenRoles).flatMap((roles) => [
         roles.greenlisted,
         roles.minBalanceExempt,
       ]),
-    ]),
-  ];
+    ),
+  ].filter((role) => !setByInitializer.has(role));
 };

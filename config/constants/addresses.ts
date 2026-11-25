@@ -132,6 +132,9 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
   arc: {
     accessControl: '0xD0e01E127cf111AAB7CA56204D5A24532F86461c',
     timelock: '0x450F76E9eC5bB13C4945092c2055cB39789E1A69',
+    pauseManager: '0xEcB4DEaAd31e5091B79CCE12a00C578f401d7761',
+    timelockManager: '0x223101852Ae5693653C6EaedB5F2726e82625652',
+    timelockController: '0xD80f03adE782109cfa2D97b97a9A94bfC5180d36',
     paymentTokens: {
       usdc: {
         // ERC-20 interface: 6 decimals; native USDC gas balances use 18.
@@ -1706,6 +1709,9 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
   bsc: {
     accessControl: '0x7dD3e89fa418577f4BE6C4C47B242c6a9181a2DD',
     timelock: '0xdcf9c7A65133a268b110307CA8157538D2D906a3',
+    pauseManager: '0x8E69c1dc40A31859d3bFA9CF0cabCcca3BFaab5F',
+    timelockManager: '0x401239F23C3373cC40588c6B86F61ef2131052c6',
+    timelockController: '0x2873a361b33e1E83C3f25600d8206143274D92b7',
     paymentTokens: {
       xrp: {
         token: '0x1D2F0da169ceB9fC7B3144628dB156f3F6c60dBE',
@@ -1724,6 +1730,8 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0x583970971EFcEBfcebD3b530E436B8fEEb3D43C7',
       depositVault: '0x30B59844eC16ABA3ec4ca0BD97557CcB670D924E',
       redemptionVaultSwapper: '0x73685BD72dF34B92Bc81D43ef35CFf4300DE8625',
+      depositVaultV2: '0x6F97829CE058e8D734854725142daecC78AAAB42',
+      redemptionVaultV2: '0xb85344A05d32B668B42Aa835d198149ac5D6D991',
       axelar: {
         manager: '0xA16024Ebc6FC450f57C63fCe1E4CE446Bf1CfE6d',
         tokenId:

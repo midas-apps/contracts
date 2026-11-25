@@ -239,6 +239,25 @@ describe('manifest slot resolution', () => {
     });
   });
 
+  it('resolves an impl listed only in allAddresses', () => {
+    const IMPL_C = '0x703257482D94FA7518345B115ED201f880Ea7F7C';
+    const withDuplicates = {
+      impls: {
+        hashB: {
+          ...manifest.impls.hashB,
+          allAddresses: [IMPL_B, IMPL_C],
+        },
+      },
+    };
+    expect(
+      initializedSlotFromManifest(withDuplicates, IMPL_C.toLowerCase()),
+    ).to.deep.equal({ slot: 7, offset: 1 });
+    expect(initializedSlotFromManifest(withDuplicates, IMPL_B)).to.deep.equal({
+      slot: 7,
+      offset: 1,
+    });
+  });
+
   it('returns undefined for unknown impl or missing manifest', () => {
     expect(
       initializedSlotFromManifest(manifest, '0x' + '22'.repeat(20)),

@@ -46,6 +46,11 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       action: 'update-ac',
       subAction: 'set-user-facing-roles',
       comment: `set ${missing.length} user facing roles`,
+      changes: missing.map((role) => ({
+        field: `ac.isUserFacingRole[${role}]`,
+        current: false,
+        target: true,
+      })),
     },
   );
 

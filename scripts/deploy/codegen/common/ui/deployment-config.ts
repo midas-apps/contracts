@@ -19,7 +19,11 @@ import {
   VaultType,
 } from '../../../../../config/constants/addresses';
 import { isPaymentTokenName } from '../../../../../helpers/utils';
-import { PostDeployConfig, VaultFunctionName } from '../../../common/types';
+import {
+  DEFAULT_CLAWBACK_RECEIVER,
+  PostDeployConfig,
+  VaultFunctionName,
+} from '../../../common/types';
 
 export const configsPerNetworkConfig = {
   dv: getDvConfigFromUser,
@@ -32,6 +36,7 @@ export const configsPerNetworkConfig = {
   rvAave: getRvAaveConfigFromUser,
   rvMorpho: getRvMorphoConfigFromUser,
   genericConfig: getGenericConfigFromUser,
+  token: getTokenConfigFromUser,
   postDeploy: {
     grantRoles: getPostDeployGrantRolesConfigFromUser,
     addPaymentTokens: getPostDeployAddPaymentTokensConfigFromUser,
@@ -556,6 +561,26 @@ async function getRvUstbConfigFromUser(hre: HardhatRuntimeEnvironment) {
     ...config,
     type: 'USTB' as const,
   };
+}
+
+async function getTokenConfigFromUser(_: HardhatRuntimeEnvironment) {
+  const config = await group({
+    intro: () => Promise.resolve(intro('mToken')).then(() => undefined),
+    clawbackReceiver: () =>
+      text({
+        message: `Clawback Receiver Address (leave blank to use the default ${DEFAULT_CLAWBACK_RECEIVER})`,
+        defaultValue: DEFAULT_CLAWBACK_RECEIVER,
+        placeholder: DEFAULT_CLAWBACK_RECEIVER,
+        validate: validateOptionalAddress,
+      })
+        .then(requireNotCancelled)
+        .then(normalizeOptionalAddress),
+    outro: () => Promise.resolve(outro(`Done...`)).then(() => undefined),
+  }).then(clearIntroOutro);
+
+  return Object.fromEntries(
+    Object.entries(config).filter(([, value]) => value !== undefined),
+  );
 }
 
 async function getPostDeployGrantRolesConfigFromUser(

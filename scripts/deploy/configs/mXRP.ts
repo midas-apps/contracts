@@ -1,3 +1,4 @@
+import { hours } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
 import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
@@ -10,7 +11,11 @@ export const mXRPDeploymentConfig: DeploymentConfig = {
       maxAnswerDeviation: parseUnits('0.2', 8),
       description: 'mXRP/XRP',
     },
-    dataFeed: {},
+    dataFeed: {
+      // price is frozen: min = max = oracle price at migration
+      minAnswer: parseUnits('1.0405039', 8),
+      maxAnswer: parseUnits('1.0405039', 8),
+    },
   },
   networkConfigs: {
     [chainIds.xrplevm]: {
@@ -73,41 +78,48 @@ export const mXRPDeploymentConfig: DeploymentConfig = {
       },
     },
     [chainIds.bsc]: {
+      // mXRP on bsc is retired: only instant redemptions stay enabled
       dv: {
+        version: 'v2',
         type: 'REGULAR',
         enableSanctionsList: false,
-        feeReceiver: '0x878e651b8410bf742D75Cb23e87B496B7E9b816f',
         tokensReceiver: '0x6FD868DCDb4A7e74718c6f09FCf0678710A693CE',
-        instantDailyLimit: constants.MaxUint256,
+        mTokenDataFeed: 'dataFeed',
         instantFee: parseUnits('0', 2),
+        minInstantFee: parseUnits('0', 2),
+        maxInstantFee: parseUnits('0', 2),
+        // holdback is disabled
+        maxInstantShare: parseUnits('100', 2),
         variationTolerance: parseUnits('0.3', 2),
+        minAmount: parseUnits('1'),
         minMTokenAmountForFirstDeposit: parseUnits('0', 18),
-        maxSupplyCap: parseUnits('10000000', 18),
+        maxAmountPerRequest: parseUnits('0', 18),
+        sequentialRequestProcessing: true,
       },
-      rvSwapper: {
-        type: 'SWAPPER',
-        feeReceiver: '0x8fee409f8F772667ADD2a2ccfB8C5182a7349cE9',
+      rv: {
+        version: 'v2',
+        type: 'REGULAR',
         tokensReceiver: '0x6FD868DCDb4A7e74718c6f09FCf0678710A693CE',
         requestRedeemer: '0x33541b80AF7779F5D53C9872c0135B0aFA6bC14d',
-        instantDailyLimit: constants.MaxUint256,
-        instantFee: parseUnits('0.3', 2),
+        mTokenDataFeed: 'dataFeed',
+        instantFee: parseUnits('0', 2),
+        minInstantFee: parseUnits('0', 2),
+        maxInstantFee: parseUnits('0', 2),
+        // holdback is disabled
+        maxInstantShare: parseUnits('100', 2),
         variationTolerance: parseUnits('0.3', 2),
-        liquidityProvider: 'dummy',
+        minAmount: parseUnits('1'),
         enableSanctionsList: false,
-        swapperVault: 'dummy',
+        sequentialRequestProcessing: true,
       },
       postDeploy: {
-        axelarIts: {
-          operator: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
-          flowLimit: parseUnits('1250', 18),
-        },
         addPaymentTokens: {
           vaults: [
             {
               paymentTokens: [
                 {
                   token: 'xrp',
-                  allowance: parseUnits('1000000000', 18),
+                  allowance: parseUnits('4113', 18),
                 },
               ],
               type: 'depositVault',
@@ -116,10 +128,10 @@ export const mXRPDeploymentConfig: DeploymentConfig = {
               paymentTokens: [
                 {
                   token: 'xrp',
-                  allowance: parseUnits('1000000000', 18),
+                  allowance: parseUnits('4113', 18),
                 },
               ],
-              type: 'redemptionVaultSwapper',
+              type: 'redemptionVault',
             },
           ],
         },
@@ -131,6 +143,40 @@ export const mXRPDeploymentConfig: DeploymentConfig = {
         setRoundData: {
           data: parseUnits('1', 8),
         },
+        tokenConfig: {
+          maxSupplyCap: parseUnits('3951.5808159634269981', 18),
+          // default Midas clawback receiver
+          clawbackReceiver: '0xD0cc216d848dbFC1b083031A7486d0CAdaf4EcDa',
+        },
+        mintRateLimits: {
+          buckets: [
+            // primary bucket: 0 is the default bucket of every minter
+            { bucketId: 0, window: hours(24), limit: parseUnits('0', 18) },
+          ],
+        },
+        instantLimits: {
+          depositVault: [{ window: hours(24), limit: parseUnits('0', 18) }],
+          redemptionVault: [
+            {
+              window: hours(24),
+              limit: parseUnits('3951.5808159634269981', 18),
+            },
+          ],
+        },
+        greenlist: {
+          depositVault: false,
+          redemptionVault: false,
+        },
+        preferLoanLiquidity: {
+          redemptionVault: false,
+        },
+        pauseFunctions: {
+          redemptionVault: [
+            'redeemRequest',
+            'redeemRequestWithCustomRecipient',
+          ],
+        },
+        pauseContracts: ['depositVault'],
       },
     },
   },

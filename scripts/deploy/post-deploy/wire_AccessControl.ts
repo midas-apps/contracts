@@ -41,8 +41,13 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const timelockManagerWired =
     (await timelockManager.timelock()) !== ethers.constants.AddressZero;
 
+  // the v1 access control has no `timelockManager()`: the call reverts there,
+  // which means that it is not wired yet
   const accessControlWired =
-    (await accessControl.timelockManager()) !== ethers.constants.AddressZero;
+    (await accessControl.timelockManager().catch((e) => {
+      if (e?.code !== 'CALL_EXCEPTION') throw e;
+      return ethers.constants.AddressZero;
+    })) !== ethers.constants.AddressZero;
 
   if (!timelockManagerWired) {
     const tx = await timelockManager.populateTransaction.initializeTimelock(
@@ -50,6 +55,13 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     );
     const txRes = await sendAndWaitForCustomTxSign(hre, tx, {
       comment: `Initialize timelock controller in timelock manager`,
+      changes: [
+        {
+          field: 'timelockManager.timelock',
+          current: undefined,
+          target: addresses.timelockController,
+        },
+      ],
       action: 'update-ac',
     });
 
@@ -65,6 +77,18 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     );
     const txRes = await sendAndWaitForCustomTxSign(hre, tx, {
       comment: `Initialize relationships in access control`,
+      changes: [
+        {
+          field: 'accessControl.timelockManager',
+          current: undefined,
+          target: addresses.timelockManager,
+        },
+        {
+          field: 'accessControl.pauseManager',
+          current: undefined,
+          target: addresses.pauseManager,
+        },
+      ],
       action: 'update-ac',
     });
 

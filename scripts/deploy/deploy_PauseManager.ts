@@ -1,14 +1,11 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import { DeployFunction, NULL_DELAY } from './common/types';
+import { DeployFunction, PAUSE_DELAY } from './common/types';
 import { deployAndVerifyProxy } from './common/utils';
 import { networkDeploymentConfigs } from './configs/network-configs';
 
 import { getCurrentAddresses } from '../../config/constants/addresses';
 import { getCommonContractNames } from '../../helpers/contracts';
-
-/** pause delay is not configurable: falls back to the role/default delay */
-const PAUSE_DELAY = NULL_DELAY;
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const addresses = getCurrentAddresses(hre);

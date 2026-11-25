@@ -13,6 +13,8 @@ import {
 } from 'ethers';
 import { EIP1193Provider, HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import { AsyncLocalStorage } from 'node:async_hooks';
+
 import { DeploymentConfig } from './types';
 
 import { MTokenName } from '../../../config';
@@ -27,97 +29,9 @@ import {
   logDeployProxy,
   tryEtherscanVerifyImplementation,
 } from '../../../helpers/utils';
+import { MidasTimelockManager } from '../../../typechain-types';
 import { verifyReinitializersConsumed } from '../../upgrades/common/reinitializer';
 import { getDeploymentConfigForToken } from '../configs';
-
-const safeAbi = [
-  {
-    inputs: [],
-    name: 'domainSeparator',
-    outputs: [{ internalType: 'bytes32', name: '', type: 'bytes32' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [
-      { internalType: 'address', name: 'to', type: 'address' },
-      { internalType: 'uint256', name: 'value', type: 'uint256' },
-      { internalType: 'bytes', name: 'data', type: 'bytes' },
-      { internalType: 'enum Enum.Operation', name: 'operation', type: 'uint8' },
-      { internalType: 'uint256', name: 'safeTxGas', type: 'uint256' },
-      { internalType: 'uint256', name: 'baseGas', type: 'uint256' },
-      { internalType: 'uint256', name: 'gasPrice', type: 'uint256' },
-      { internalType: 'address', name: 'gasToken', type: 'address' },
-      { internalType: 'address', name: 'refundReceiver', type: 'address' },
-      { internalType: 'uint256', name: '_nonce', type: 'uint256' },
-    ],
-    name: 'encodeTransactionData',
-    outputs: [{ internalType: 'bytes', name: '', type: 'bytes' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [
-      { internalType: 'address', name: 'to', type: 'address' },
-      { internalType: 'uint256', name: 'value', type: 'uint256' },
-      { internalType: 'bytes', name: 'data', type: 'bytes' },
-      { internalType: 'enum Enum.Operation', name: 'operation', type: 'uint8' },
-      { internalType: 'uint256', name: 'safeTxGas', type: 'uint256' },
-      { internalType: 'uint256', name: 'baseGas', type: 'uint256' },
-      { internalType: 'uint256', name: 'gasPrice', type: 'uint256' },
-      { internalType: 'address', name: 'gasToken', type: 'address' },
-      {
-        internalType: 'address payable',
-        name: 'refundReceiver',
-        type: 'address',
-      },
-      { internalType: 'bytes', name: 'signatures', type: 'bytes' },
-    ],
-    name: 'execTransaction',
-    outputs: [{ internalType: 'bool', name: 'success', type: 'bool' }],
-    stateMutability: 'payable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      { internalType: 'address', name: 'to', type: 'address' },
-      { internalType: 'uint256', name: 'value', type: 'uint256' },
-      { internalType: 'bytes', name: 'data', type: 'bytes' },
-      { internalType: 'enum Enum.Operation', name: 'operation', type: 'uint8' },
-      { internalType: 'uint256', name: 'safeTxGas', type: 'uint256' },
-      { internalType: 'uint256', name: 'baseGas', type: 'uint256' },
-      { internalType: 'uint256', name: 'gasPrice', type: 'uint256' },
-      { internalType: 'address', name: 'gasToken', type: 'address' },
-      { internalType: 'address', name: 'refundReceiver', type: 'address' },
-      { internalType: 'uint256', name: '_nonce', type: 'uint256' },
-    ],
-    name: 'getTransactionHash',
-    outputs: [{ internalType: 'bytes32', name: '', type: 'bytes32' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [{ internalType: 'address', name: 'owner', type: 'address' }],
-    name: 'isOwner',
-    outputs: [{ internalType: 'bool', name: '', type: 'bool' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'nonce',
-    outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'getOwners',
-    outputs: [{ internalType: 'address[]', name: '', type: 'address[]' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-];
 
 export const executeFuncAsync = async <T>(
   hre: HardhatRuntimeEnvironment,
@@ -497,6 +411,13 @@ export const getWalletAddressForAction = async (
   return await customSigner.getWalletAddress(action, mtoken, chainId);
 };
 
+/** An on-chain field changed by a tx: `field` goes from `current` to `target` */
+export type FieldChange = {
+  field: string;
+  current: unknown;
+  target: unknown;
+};
+
 const sendAndWaitForCustomTxSignDirect = async (
   hre: HardhatRuntimeEnvironment,
   populatedTx: PopulatedTransaction,
@@ -515,7 +436,8 @@ const sendAndWaitForCustomTxSignDirect = async (
       | 'axelar-wire-tokens'
       | 'axelar-update-config'
       | 'update-token'
-      | 'deployer';
+      | 'deployer'
+      | 'update-pause-manager';
     subAction?:
       | 'add-payment-token'
       | 'grant-token-roles'
@@ -524,6 +446,8 @@ const sendAndWaitForCustomTxSignDirect = async (
       | 'set-round-data'
       | 'timelock-call-upgrade'
       | 'pause-function'
+      | 'pause-contract'
+      | 'set-vault-setting'
       | 'set-greenlist-enabled'
       | 'set-lz-rate-limit-configs'
       | 'set-aave-pool'
@@ -544,85 +468,37 @@ const sendAndWaitForCustomTxSignDirect = async (
       | 'set-ustb-deposits-enabled'
       | 'set-user-facing-roles'
       | 'set-function-permissions';
+    /** skip the signer's tx simulation, e.g. for a call valid only after an upgrade */
+    skipPrediction?: boolean;
+    /** on-chain fields changed by the tx, for the sync report. Not sent to the signer */
+    changes?: FieldChange[];
   },
-  safeMiddlewareWallet?: string,
+  safe?: string,
   confirmations = 2,
 ) => {
-  if (safeMiddlewareWallet) {
-    const callerCode = await hre.ethers.provider.getCode(safeMiddlewareWallet);
-
-    const isCallerContract = callerCode !== '0x';
-
-    if (isCallerContract) {
-      console.log(
-        'Caller is a contract, assuming it is a safe contract to execute tx',
-      );
-
-      // we assume that the owner contract is a safe contract
-      const safeContract = await getContractAt(
-        hre,
-        safeAbi,
-        safeMiddlewareWallet,
-      );
-
-      const owners: string[] = await safeContract.getOwners();
-
-      const ownerForSignature = await getWalletAddressForAction(
-        hre,
-        txSignMetadata?.action ?? '',
-      );
-
-      if (
-        !owners.find((v) => v.toLowerCase() === ownerForSignature.toLowerCase())
-      ) {
-        throw new Error(
-          `Owner ${ownerForSignature} is not found in the safe contract, allowed callers: [${owners.join(
-            ', ',
-          )}]`,
-        );
-      }
-
-      populatedTx = await safeContract.populateTransaction.execTransaction(
-        populatedTx.to,
-        populatedTx.value ?? 0,
-        populatedTx.data,
-        0,
-        0,
-        0,
-        0,
-        constants.AddressZero,
-        constants.AddressZero,
-        // FIXME: for some reason, encode of 1 is required to be padded, so abi coder does not produce
-        // the required result with encode(['address', 'uint256'], [ownerForSignature, 1])
-        hre.ethers.utils.defaultAbiCoder.encode(
-          ['address'],
-          [ownerForSignature],
-        ) +
-          '000000000000000000000000000000000000000000000000000000000000000001',
-      );
-    } else {
-      console.warn('Safe wallet is passed but caller is not a contract');
-    }
-  }
-
   const hreNetwork: HardhatRuntimeEnvironment = hre;
 
   const networkCustomSigner = await hreNetwork.getCustomSigner();
 
-  const sendResult = networkCustomSigner.sendTransaction(
-    {
-      data: populatedTx.data!,
-      to: populatedTx.to!,
-      value: populatedTx.value,
-    },
-    {
-      ...(txSignMetadata ?? {}),
-      chainId: hreNetwork.network.config.chainId,
-      idempotenceId: txSignMetadata?.idempotenceId ?? hreNetwork.contextId,
-    },
-  );
+  const signerMetadata = { ...(txSignMetadata ?? {}) };
+  delete signerMetadata.changes;
 
-  const res = await sendResult;
+  const transaction = {
+    data: populatedTx.data!,
+    to: populatedTx.to!,
+    value: populatedTx.value,
+  };
+
+  const res = safe
+    ? await networkCustomSigner.proposeSafeTransaction(transaction, {
+        safe,
+        comment: txSignMetadata?.comment,
+      })
+    : await networkCustomSigner.sendTransaction(transaction, {
+        ...signerMetadata,
+        chainId: hreNetwork.network.config.chainId,
+        idempotenceId: txSignMetadata?.idempotenceId ?? hreNetwork.contextId,
+      });
 
   let resToReturn: unknown;
 
@@ -641,7 +517,7 @@ const sendAndWaitForCustomTxSignDirect = async (
   }
 
   logDeploy(
-    'Tx' + networkCustomSigner.type === 'customSigner' ? '' : ' Submitted',
+    'Tx' + (networkCustomSigner.type === 'customSigner' ? '' : ' Submitted'),
     hreNetwork.network.name,
     typeof resToReturn === 'object'
       ? JSON.stringify(resToReturn)
@@ -691,11 +567,28 @@ const getTimelockRequirement = async (
   return { timelockManager, role, delay };
 };
 
+/** `safeMiddlewareWallet` if it is a contract (assumed a Safe), else undefined */
+const getSafeCaller = async (
+  hre: HardhatRuntimeEnvironment,
+  safeMiddlewareWallet?: string,
+) => {
+  if (!safeMiddlewareWallet) return undefined;
+
+  if ((await hre.ethers.provider.getCode(safeMiddlewareWallet)) === '0x') {
+    console.warn('Safe wallet is passed but caller is not a contract');
+    return undefined;
+  }
+
+  return safeMiddlewareWallet;
+};
+
 /**
- * Sends a tx via the custom signer. If the call requires a timelock for the
- * sender, it is wrapped into `MidasTimelockManager.scheduleTimelockOperation`
+ * Wraps the tx into `MidasTimelockManager.scheduleTimelockOperation` and sends
+ * it via the custom signer
  */
-export const sendAndWaitForCustomTxSign = async (
+const scheduleTimelockOperationTx = async (
+  timelockManager: MidasTimelockManager,
+  reason: string,
   ...args: Parameters<typeof sendAndWaitForCustomTxSignDirect>
 ) => {
   const [
@@ -706,31 +599,11 @@ export const sendAndWaitForCustomTxSign = async (
     confirmations,
   ] = args;
 
-  const safeCaller =
-    safeMiddlewareWallet &&
-    (await hre.ethers.provider.getCode(safeMiddlewareWallet)) !== '0x'
-      ? safeMiddlewareWallet
-      : undefined;
-
-  const proposer =
-    safeCaller ??
-    (await getWalletAddressForAction(
-      hre,
-      txSignMetadata?.action ?? '',
-      txSignMetadata?.mToken,
-    ));
-
-  const timelock = await getTimelockRequirement(hre, populatedTx, proposer);
-
-  if (!timelock) {
-    return sendAndWaitForCustomTxSignDirect(...args);
-  }
+  const safeCaller = await getSafeCaller(hre, safeMiddlewareWallet);
 
   if (populatedTx.value && !BigNumber.from(populatedTx.value).isZero()) {
     throw new Error('Timelocked operations do not support msg.value');
   }
-
-  const { timelockManager, role, delay } = timelock;
 
   const operationId = await timelockManager.getOperationId(
     populatedTx.to!,
@@ -738,7 +611,7 @@ export const sendAndWaitForCustomTxSign = async (
   );
 
   console.log(
-    `Tx to ${populatedTx.to} requires timelock (role: ${role}, delay: ${delay}s), scheduling via ${timelockManager.address}`,
+    `Tx to ${populatedTx.to} requires timelock (${reason}), scheduling via ${timelockManager.address}`,
   );
 
   const scheduleTx =
@@ -754,7 +627,7 @@ export const sendAndWaitForCustomTxSign = async (
       ...txSignMetadata,
       comment: `[timelock schedule] ${txSignMetadata?.comment ?? ''}`,
     },
-    safeMiddlewareWallet,
+    safeCaller,
     confirmations,
   );
 
@@ -765,6 +638,186 @@ export const sendAndWaitForCustomTxSign = async (
   );
 
   return txId;
+};
+
+export type TxSignMetadata = NonNullable<
+  Parameters<typeof sendAndWaitForCustomTxSignDirect>[2]
+>;
+
+/** A tx recorded by `collectTxs` instead of being sent */
+export type PlannedTx = {
+  tx: PopulatedTransaction;
+  metadata?: TxSignMetadata;
+  safeMiddlewareWallet?: string;
+  /** sent via `sendAndWaitForTimelockedTxSign` */
+  alwaysTimelocked?: boolean;
+};
+
+type TxCollector = { txs: PlannedTx[]; skipped: string[] };
+
+const txCollector = new AsyncLocalStorage<TxCollector>();
+
+/**
+ * Runs `fn` with the send helpers recording txs instead of sending them.
+ * Returns the recorded txs in the order they were sent and the reasons of
+ * the parts skipped via `logSkipped`
+ */
+export const collectTxs = async (fn: () => Promise<unknown>) => {
+  const collector: TxCollector = { txs: [], skipped: [] };
+  await txCollector.run(collector, fn);
+  return collector;
+};
+
+/** Records the tx when called inside `collectTxs` */
+const recordTx = (planned: PlannedTx) => {
+  const collector = txCollector.getStore();
+  if (!collector) return false;
+
+  collector.txs.push(planned);
+  return true;
+};
+
+/** Logs a skipped part of a step, also reported by `collectTxs` */
+export const logSkipped = (reason: string) => {
+  console.warn(`Skipped: ${reason}`);
+  txCollector.getStore()?.skipped.push(reason);
+};
+
+/**
+ * Sends a tx via the custom signer. If the call requires a timelock for the
+ * sender, it is wrapped into `MidasTimelockManager.scheduleTimelockOperation`
+ */
+export const sendAndWaitForCustomTxSign = async (
+  ...args: Parameters<typeof sendAndWaitForCustomTxSignDirect>
+) => {
+  const [
+    hre,
+    populatedTx,
+    txSignMetadata,
+    safeMiddlewareWallet,
+    confirmations,
+  ] = args;
+
+  if (
+    recordTx({
+      tx: populatedTx,
+      metadata: txSignMetadata,
+      safeMiddlewareWallet,
+    })
+  ) {
+    return 'planned';
+  }
+
+  const safeCaller = await getSafeCaller(hre, safeMiddlewareWallet);
+
+  const proposer =
+    safeCaller ??
+    (await getWalletAddressForAction(
+      hre,
+      txSignMetadata?.action ?? '',
+      txSignMetadata?.mToken,
+    ));
+
+  const timelock = await getTimelockRequirement(hre, populatedTx, proposer);
+
+  if (!timelock) {
+    return sendAndWaitForCustomTxSignDirect(
+      hre,
+      populatedTx,
+      txSignMetadata,
+      safeCaller,
+      confirmations,
+    );
+  }
+
+  const { timelockManager, role, delay } = timelock;
+
+  return scheduleTimelockOperationTx(
+    timelockManager,
+    `role: ${role}, delay: ${delay}s`,
+    hre,
+    populatedTx,
+    txSignMetadata,
+    safeCaller,
+    confirmations,
+  );
+};
+
+/**
+ * Same as `sendAndWaitForCustomTxSign`, but for the calls that are always
+ * timelocked (constant override delay). Skips the on-chain detection, which
+ * sends the tx as is when the access control is not wired or the role is not
+ * granted yet, and always schedules via the timelock manager of the network
+ */
+export const sendAndWaitForTimelockedTxSign = async (
+  ...args: Parameters<typeof sendAndWaitForCustomTxSignDirect>
+) => {
+  const [hre, populatedTx, txSignMetadata, safeMiddlewareWallet] = args;
+
+  if (
+    recordTx({
+      tx: populatedTx,
+      metadata: txSignMetadata,
+      safeMiddlewareWallet,
+      alwaysTimelocked: true,
+    })
+  ) {
+    return 'planned';
+  }
+
+  const timelockManagerAddress = getCurrentAddresses(hre)?.timelockManager;
+
+  if (!timelockManagerAddress) {
+    throw new Error('Timelock manager address is not set');
+  }
+
+  const timelockManager = await hre.ethers.getContractAt(
+    'MidasTimelockManager',
+    timelockManagerAddress,
+  );
+
+  return scheduleTimelockOperationTx(
+    timelockManager,
+    'always timelocked',
+    ...args,
+  );
+};
+
+/**
+ * Pause manager of the access control, the one that vaults and tokens check.
+ * If the access control is not wired yet, falls back to the configured pause
+ * manager (the one `wire:ac` wires): txs to it can be submitted now and
+ * executed once `initializeRelationships` is executed. Undefined (logged as
+ * skipped) if there is none
+ */
+export const getPauseManager = async (
+  hre: HardhatRuntimeEnvironment,
+  accessControlAddress: string,
+) => {
+  const ac = await getContractAt(
+    hre,
+    'MidasAccessControl',
+    accessControlAddress,
+  );
+  let pauseManager: string = await ac.pauseManager();
+
+  if (pauseManager === constants.AddressZero) {
+    const configured = getCurrentAddresses(hre)?.pauseManager;
+
+    if (!configured) {
+      logSkipped(
+        `access control ${accessControlAddress} has no pause manager and none is configured`,
+      );
+      return undefined;
+    }
+
+    console.warn(
+      `access control ${accessControlAddress} is not wired yet (initializeRelationships), using the configured pause manager ${configured}: the txs can be executed only after the wiring`,
+    );
+    pauseManager = configured;
+  }
+
+  return hre.ethers.getContractAt('MidasPauseManager', pauseManager);
 };
 
 export const toFunctionSelector = (signature: string) => {
