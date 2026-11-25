@@ -47,6 +47,8 @@ type ConfigPerNetwork<TKey extends string> = Partial<
        */
       pathways?: 'direct-only' | 'all';
       linkedNetworks: Network[];
+      /** Per-token override of `layerZeroBlockFinality` for a source network. */
+      blockFinality?: Partial<Record<Network, number>>;
     }
   >
 >;
@@ -145,6 +147,18 @@ export const lzConfigsPerMToken: PartialConfigPerNetwork<
       linkedNetworks: ['monad', 'plasma'],
     },
     mHyperBTC: {
+      pathways: 'direct-only',
+      linkedNetworks: ['monad'],
+    },
+    mFONE: {
+      // Mainnet <-> Robinhood only. Robinhood -> Mainnet waits 9000 blocks
+      // (0.1 s blocks = 15 min); the shared Robinhood value stays for mGLO.
+      pathways: 'direct-only',
+      linkedNetworks: ['robinhood'],
+      blockFinality: { robinhood: 9000 },
+    },
+    mArb: {
+      // Mainnet <-> Monad only.
       pathways: 'direct-only',
       linkedNetworks: ['monad'],
     },
@@ -337,10 +351,14 @@ export default async function () {
 
       console.log('dvnsWoExcluded', dvnsWoExcluded);
 
-      if (
-        !layerZeroBlockFinality[networkA] ||
-        !layerZeroBlockFinality[networkB]
-      ) {
+      const finalityA =
+        tokenConfig.blockFinality?.[networkA] ??
+        layerZeroBlockFinality[networkA];
+      const finalityB =
+        tokenConfig.blockFinality?.[networkB] ??
+        layerZeroBlockFinality[networkB];
+
+      if (!finalityA || !finalityB) {
         throw new Error(
           `Block finality not found for network ${networkA} or ${networkB}`,
         );
@@ -361,7 +379,7 @@ export default async function () {
             : dvnsWoExcluded,
           [],
         ], // [ requiredDVN[], [ optionalDVN[], threshold ] ]
-        [layerZeroBlockFinality[networkA], layerZeroBlockFinality[networkB]], // [A to B confirmations, B to A confirmations]
+        [finalityA, finalityB], // [A to B confirmations, B to A confirmations]
         [
           getEnforcedOptionsForNetwork(networkB),
           getEnforcedOptionsForNetwork(networkA),

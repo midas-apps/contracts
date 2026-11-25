@@ -446,6 +446,9 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0xCF4e49f5e750Af8F2f9Aa1642B68E5839D9c1C00',
       depositVault: '0x41438435c20B1C2f1fcA702d387889F346A0C3DE',
       redemptionVaultSwapper: '0x44b0440e35c596e858cEA433D0d82F5a985fD19C',
+      layerZero: {
+        oft: '0x4233cFCD2047eF862c9385b86636E2A648E92397',
+      },
       addressProfiles: {
         mFONEUnloop: {
           customFeed: '0x6dfD4f744273142AcdAaFd96E3A194D604a14Db3',
@@ -847,6 +850,9 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0xb071D72bc4C976510E342326EE453D8d60313bFE',
       depositVault: '0xf61D9C28F01396C11159e0DAE2aA046d74BB0AC0',
       redemptionVaultSwapper: '0xEB3Ca1951a1F261e270b8A954EC57B5DF9Fe7725',
+      layerZero: {
+        oft: '0x01503b2D3A72609A7Ce05aD4eA9a2EDBBF8D509D',
+      },
     },
     mArbETH: {
       token: '0x6D8a6E97446D858a1D1564BBDB4638429015DBe8',
@@ -1867,6 +1873,16 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         oft: '0xA69BfCc664e808176484Fa427fB2BFcB096531eF',
       },
     },
+    mArb: {
+      token: '0x19d1B398C195C429DB145B7aD75bE29F9913B5c9',
+      customFeed: '0xb24A6A9727d3367B9E9f6B5EdCBB5b442dE7693c',
+      dataFeed: '0xE056Febe87C79709924d50A5b9C7B28b8496e678',
+      depositVault: '0x7AFfB550f095630dAC6Db7eB7d15765c7F4E4c53',
+      redemptionVaultSwapper: '0x68B65f5F720F2dC46ceE69AC56E1F339074a2E5E',
+      layerZero: {
+        oft: '0xf73c5Eb142F3005356BA324934c5B825Eb19E056',
+      },
+    },
   },
   injective: {
     accessControl: '0x76f5c631CD6D65B1a5702E382Be5a37859eE326C',
@@ -2024,6 +2040,9 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeed: '0x37c917127357c5f686306B7143AB9cA9008971e1',
       depositVault: '0x293A8fd4e85CA038f494651dD203b2c27079f69d',
       redemptionVaultSwapper: '0xdBaf85259147bB48CF113D08abea380637886134',
+      layerZero: {
+        oft: '0x830E5a872ea25115A44d9a1D166cce2Ed7f1b1E3',
+      },
     },
   },
   ink: {

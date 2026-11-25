@@ -1,3 +1,4 @@
+import { hours } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
 import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
@@ -109,6 +110,17 @@ export const mFONEDeploymentConfig: DeploymentConfig = {
             },
           ],
         },
+        // Ethereum OFT adapter. Outbound rate limit to Robinhood is 2M/day.
+        layerZero: {
+          delegate: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          owner: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          rateLimitConfig: {
+            default: {
+              limit: parseUnits('2000000'),
+              window: hours(24),
+            },
+          },
+        },
       },
     },
     [chainIds.robinhood]: {
@@ -185,6 +197,17 @@ export const mFONEDeploymentConfig: DeploymentConfig = {
         },
         setRoundData: {
           data: parseUnits('1.13728753', 8),
+        },
+        // Non-origin-chain OFT adapter. Outbound rate limit to Mainnet is 2M/day.
+        layerZero: {
+          delegate: '0x563e0fc290D535fC5549873aEcE97A16b001B9eD',
+          owner: '0x563e0fc290D535fC5549873aEcE97A16b001B9eD',
+          rateLimitConfig: {
+            default: {
+              limit: parseUnits('2000000'),
+              window: hours(24),
+            },
+          },
         },
       },
     },
