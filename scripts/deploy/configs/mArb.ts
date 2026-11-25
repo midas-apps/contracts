@@ -1,3 +1,4 @@
+import { hours } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
 import { constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
@@ -96,6 +97,100 @@ export const mArbDeploymentConfig: DeploymentConfig = {
         },
         setRoundData: {
           data: parseUnits('1', 8),
+        },
+        // Ethereum OFT adapter. Outbound rate limit to Monad is 2M/day.
+        layerZero: {
+          delegate: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          owner: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          rateLimitConfig: {
+            default: {
+              limit: parseUnits('2000000'),
+              window: hours(24),
+            },
+          },
+        },
+      },
+    },
+    [chainIds.monad]: {
+      dv: {
+        type: 'REGULAR',
+        enableSanctionsList: false,
+        feeReceiver: '0x55ABc58B3fe5E00DE100Fa1b2B7303Da072E6D85',
+        tokensReceiver: '0xC75470D1Da1f767fe2eC54B617D2cAE0a997c6cA',
+        instantDailyLimit: constants.MaxUint256,
+        instantFee: parseUnits('0', 2),
+        variationTolerance: parseUnits('3', 2),
+        maxSupplyCap: constants.MaxUint256,
+      },
+      rvSwapper: {
+        type: 'SWAPPER',
+        enableSanctionsList: false,
+        feeReceiver: '0x55ABc58B3fe5E00DE100Fa1b2B7303Da072E6D85',
+        tokensReceiver: '0xC75470D1Da1f767fe2eC54B617D2cAE0a997c6cA',
+        requestRedeemer: '0xA6689038FDb84776d074262D5280D39Ec836451e',
+        instantDailyLimit: constants.MaxUint256,
+        instantFee: parseUnits('0.5', 2),
+        variationTolerance: parseUnits('3', 2),
+        minAmount: parseUnits('1', 18),
+        fiatFlatFee: parseUnits('30', 18),
+        fiatAdditionalFee: parseUnits('0.1', 2),
+        liquidityProvider: 'dummy',
+        swapperVault: 'dummy',
+      },
+      postDeploy: {
+        addPaymentTokens: {
+          vaults: [
+            {
+              paymentTokens: [
+                {
+                  token: 'usdc',
+                  allowance: parseUnits('1000000000', 18),
+                  fee: 0,
+                  isStable: true,
+                },
+              ],
+              type: 'depositVault',
+            },
+            {
+              paymentTokens: [
+                {
+                  token: 'usdc',
+                  allowance: parseUnits('1000000000', 18),
+                  fee: 0,
+                  isStable: true,
+                },
+              ],
+              type: 'redemptionVaultSwapper',
+            },
+          ],
+        },
+        grantRoles: {
+          tokenManagerAddress: '0x50b047aFb2a6eE26579f0b9c42D56e1a994be8c2',
+          vaultsManagerAddress: '0x2ACB4BdCbEf02f81BF713b696Ac26390d7f79A12',
+          oracleManagerAddress: '0x9ba743471f8AF2A951c69C400f7669eC1660cD0A',
+        },
+        greenlist: {
+          depositVault: true,
+          redemptionVaultSwapper: true,
+        },
+        pauseFunctions: {
+          depositVault: ['depositInstant', 'depositInstantWithCustomRecipient'],
+          redemptionVaultSwapper: ['redeemFiatRequest'],
+        },
+        setRoundData: {
+          // Ethereum mArb price on 2026-11-25 (last update 2026-11-23)
+          data: parseUnits('1.01450206', 8),
+        },
+        // Non-origin-chain OFT adapter. Outbound rate limit to Mainnet is 2M/day.
+        layerZero: {
+          delegate: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          owner: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
+          rateLimitConfig: {
+            default: {
+              limit: parseUnits('2000000'),
+              window: hours(24),
+            },
+          },
         },
       },
     },
