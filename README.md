@@ -248,7 +248,8 @@ Base contract for all mToken implementations
 **Key Features:**
 
 - Minting and burning functionality (role-protected)
-- Pausable transfers - transfers are gated by the global [`MidasPauseManager`](contracts/access/MidasPauseManager.sol) (function-level pause), on top of `ERC20PausableUpgradeable`
+- Pausable transfers - transfers, mints and burns are gated only by the global [`MidasPauseManager`](contracts/access/MidasPauseManager.sol) (global, contract or function-level pause). The inherited `ERC20PausableUpgradeable` is a leftover from the v1 contracts that cannot be removed (storage layout); its pause is not used, so `paused()` does not reflect the pause state
+- A global or contract pause also blocks `clawback()`, `mintGoverned()` and `burnGoverned()`; a function-level pause keeps them available
 - Blacklist functionality - blacklisted users cannot send or receive any tokens
 - Configurable maximum supply cap (`maxSupplyCap`), enforced on every mint
 - Per-token mint rate limits (windowed)
