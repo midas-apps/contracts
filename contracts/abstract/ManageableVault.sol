@@ -93,7 +93,7 @@ abstract contract ManageableVault is
     RateLimitLibrary.WindowRateLimits private _instantRateLimits;
 
     /**
-     * @notice last request id
+     * @notice next request id
      */
     uint256 public currentRequestId;
 
@@ -433,7 +433,6 @@ abstract contract ManageableVault is
 
     /**
      * @notice returns array of stablecoins supported by the vault
-     * can be called only from permissioned actor.
      * @return paymentTokens array of payment tokens
      */
     function getPaymentTokens() external view returns (address[] memory) {

@@ -49,12 +49,12 @@ contract CustomAggregatorV3CompatibleFeed is
     uint256 public maxAnswerDeviation;
 
     /**
-     * @notice minimal possible answer that feed can return
+     * @notice minimal answer that can be submitted
      */
     int192 public minAnswer;
 
     /**
-     * @notice maximal possible answer that feed can return
+     * @notice maximal answer that can be submitted
      */
     int192 public maxAnswer;
 

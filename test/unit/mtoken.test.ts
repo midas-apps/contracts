@@ -1265,6 +1265,75 @@ describe(`mToken`, function () {
           .connect(holder)
           .transfer(recipient.address, parseUnits('50'));
       });
+
+      it('1d window: max uint256 limit still allows mint and limit decrease after more than one window', async () => {
+        const { owner, tokenContract, holder } =
+          await setupMintRateLimitFixture();
+
+        const window = days(1);
+
+        await increaseMintRateLimitTest(
+          { tokenContract, owner },
+          window,
+          ethers.constants.MaxUint256,
+        );
+
+        await mint({ tokenContract, owner }, holder, parseUnits('1000'));
+
+        await increase(window + 1);
+
+        await mint({ tokenContract, owner }, holder, parseUnits('100'));
+
+        await increase(days(3));
+
+        await decreaseMintRateLimitTest(
+          { tokenContract, owner },
+          window,
+          parseUnits('1000'),
+        );
+
+        await mint({ tokenContract, owner }, holder, parseUnits('1000'));
+      });
+
+      it('1d window: after limit is lowered below in-flight, mint fails within the window and works after a full window', async () => {
+        const { owner, tokenContract, holder } =
+          await setupMintRateLimitFixture();
+
+        const window = days(1);
+        const newLimit = parseUnits('100');
+
+        await increaseMintRateLimitTest(
+          { tokenContract, owner },
+          window,
+          parseUnits('1000'),
+        );
+
+        await mint({ tokenContract, owner }, holder, parseUnits('900'));
+
+        await decreaseMintRateLimitTest(
+          { tokenContract, owner },
+          window,
+          newLimit,
+        );
+
+        await increase(hours(12));
+
+        await mint({ tokenContract, owner }, holder, 1, {
+          revertCustomError: {
+            customErrorName: 'WindowLimitExceeded',
+          },
+        });
+
+        await increase(hours(12));
+
+        await mint({ tokenContract, owner }, holder, newLimit);
+
+        await mint({ tokenContract, owner }, holder, parseUnits('1'), {
+          revertCustomError: {
+            customErrorName: 'WindowLimitExceeded',
+          },
+        });
+      });
     });
 
     describe('mint() rate limit buckets', () => {

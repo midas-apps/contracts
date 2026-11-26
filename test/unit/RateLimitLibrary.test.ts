@@ -5,7 +5,7 @@ import {
   minutes,
 } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration';
 import { expect } from 'chai';
-import { BigNumberish } from 'ethers';
+import { BigNumberish, constants } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
@@ -238,6 +238,83 @@ describe('RateLimitLibrary', function () {
       expect(status!.limit).eq(newLimit);
     });
 
+    it('should update a max uint256 limit after more than one window elapses', async () => {
+      const { tester } = await loadFixture(rateLimitLibraryFixture);
+      const newLimit = parseUnits('1000');
+
+      await tester.setWindowLimitPublic(WINDOW_1D, constants.MaxUint256);
+      await tester.consumeLimitPublic(parseUnits('1000'));
+
+      await time.increase(days(3));
+
+      await expect(tester.setWindowLimitPublic(WINDOW_1D, newLimit))
+        .to.emit(tester, 'WindowLimitSet')
+        .withArgs(WINDOW_1D, newLimit);
+
+      const [, amountInFlight, lastUpdated] =
+        await tester.getWindowConfigPublic(WINDOW_1D);
+
+      expect(amountInFlight).eq(0);
+      expect(lastUpdated).eq(await getCurrentBlockTimestamp());
+    });
+
+    it('should restart the full window reset when checkpointing in-flight above the limit', async () => {
+      const { tester } = await loadFixture(rateLimitLibraryFixture);
+      const newLimit = parseUnits('100');
+
+      await tester.setWindowLimitPublic(WINDOW_1D, parseUnits('1000'));
+      await tester.consumeLimitPublic(parseUnits('900'));
+      await tester.setWindowLimitPublic(WINDOW_1D, newLimit);
+
+      const [, storedBefore, lastUpdatedBefore] =
+        await tester.getWindowConfigPublic(WINDOW_1D);
+
+      await time.increase(hours(12));
+
+      // checkpoint only
+      await tester.setWindowLimitPublic(WINDOW_1D, newLimit);
+
+      const [, storedAfter, lastUpdatedAfter] =
+        await tester.getWindowConfigPublic(WINDOW_1D);
+
+      const { inFlight: expectedStored } = calculateWindowRateLimitCapacity({
+        amountInFlight: storedBefore,
+        lastUpdated: lastUpdatedBefore,
+        limit: newLimit,
+        window: WINDOW_1D,
+        now: lastUpdatedAfter,
+      });
+
+      expect(storedAfter).eq(expectedStored);
+      expect(storedAfter).gt(newLimit);
+
+      // a full window since the first update, but not since the checkpoint
+      await time.increaseTo(lastUpdatedBefore.add(WINDOW_1D));
+
+      await expectStatusMatchesCapacity(
+        tester,
+        WINDOW_1D,
+        storedAfter,
+        newLimit,
+        WINDOW_1D,
+        lastUpdatedAfter,
+      );
+      expect(
+        getStatusByWindow(await tester.getWindowStatusesPublic(), WINDOW_1D)!
+          .remaining,
+      ).eq(0);
+
+      await time.increaseTo(lastUpdatedAfter.add(WINDOW_1D));
+
+      const status = getStatusByWindow(
+        await tester.getWindowStatusesPublic(),
+        WINDOW_1D,
+      );
+
+      expect(status!.inFlight).eq(0);
+      expect(status!.remaining).eq(newLimit);
+    });
+
     it('should support multiple independent windows', async () => {
       const { tester } = await loadFixture(rateLimitLibraryFixture);
 
@@ -340,6 +417,24 @@ describe('RateLimitLibrary', function () {
       const statuses = await tester.getWindowStatusesPublic();
       expect(getStatusByWindow(statuses, WINDOW_1D)!.remaining).eq(0);
       expect(getStatusByWindow(statuses, WINDOW_1D)!.inFlight).eq(limit);
+    });
+
+    it('should consume with a max uint256 limit after more than one window elapses', async () => {
+      const { tester } = await loadFixture(rateLimitLibraryFixture);
+      const amount = parseUnits('500');
+
+      await tester.setWindowLimitPublic(WINDOW_1D, constants.MaxUint256);
+      await tester.consumeLimitPublic(parseUnits('1000'));
+
+      await time.increase(WINDOW_1D + 1);
+
+      await tester.consumeLimitPublic(amount);
+
+      const [, amountInFlight, lastUpdated] =
+        await tester.getWindowConfigPublic(WINDOW_1D);
+
+      expect(amountInFlight).eq(amount);
+      expect(lastUpdated).eq(await getCurrentBlockTimestamp());
     });
 
     it('should fail: amount exceeds remaining', async () => {
@@ -555,6 +650,79 @@ describe('RateLimitLibrary', function () {
 
       expect(status!.limit).eq(limit);
       expect(status!.remaining).eq(0);
+    });
+
+    it('should clear in-flight above a lowered limit only after a full window elapses', async () => {
+      const { tester } = await loadFixture(rateLimitLibraryFixture);
+      const limit = parseUnits('100');
+
+      await tester.setWindowLimitPublic(WINDOW_1D, parseUnits('1000'));
+      await tester.consumeLimitPublic(parseUnits('900'));
+      await tester.setWindowLimitPublic(WINDOW_1D, limit);
+
+      const [, amountInFlight, lastUpdated] =
+        await tester.getWindowConfigPublic(WINDOW_1D);
+
+      await time.increase(hours(12));
+
+      await expect(tester.consumeLimitPublic(1)).to.be.revertedWithCustomError(
+        tester,
+        'WindowLimitExceeded',
+      );
+
+      await time.increaseTo(lastUpdated.add(WINDOW_1D).sub(1));
+
+      await expectStatusMatchesCapacity(
+        tester,
+        WINDOW_1D,
+        amountInFlight,
+        limit,
+        WINDOW_1D,
+        lastUpdated,
+      );
+
+      const statusBefore = getStatusByWindow(
+        await tester.getWindowStatusesPublic(),
+        WINDOW_1D,
+      );
+
+      expect(statusBefore!.inFlight).gt(limit);
+      expect(statusBefore!.remaining).eq(0);
+
+      await time.increaseTo(lastUpdated.add(WINDOW_1D));
+
+      const statusAfter = getStatusByWindow(
+        await tester.getWindowStatusesPublic(),
+        WINDOW_1D,
+      );
+
+      expect(statusAfter!.inFlight).eq(0);
+      expect(statusAfter!.remaining).eq(limit);
+
+      await tester.consumeLimitPublic(limit);
+
+      const [, storedAfterConsume] = await tester.getWindowConfigPublic(
+        WINDOW_1D,
+      );
+
+      expect(storedAfterConsume).eq(limit);
+    });
+
+    it('should return full remaining for a max uint256 limit after more than one window elapses', async () => {
+      const { tester } = await loadFixture(rateLimitLibraryFixture);
+
+      await tester.setWindowLimitPublic(WINDOW_1D, constants.MaxUint256);
+      await tester.consumeLimitPublic(parseUnits('1000'));
+
+      await time.increase(WINDOW_1D + 1);
+
+      const status = getStatusByWindow(
+        await tester.getWindowStatusesPublic(),
+        WINDOW_1D,
+      );
+
+      expect(status!.inFlight).eq(0);
+      expect(status!.remaining).eq(constants.MaxUint256);
     });
 
     it('should show a 1 wei floor gap between split and single mulDiv', async () => {

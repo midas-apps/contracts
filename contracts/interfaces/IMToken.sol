@@ -14,12 +14,6 @@ interface IMToken is IERC20Upgradeable {
     event ClawbackReceiverSet(address indexed clawbackReceiver);
 
     /**
-     * @param name new name
-     * @param symbol new symbol
-     */
-    event SetNameSymbol(string indexed name, string indexed symbol);
-
-    /**
      * @param isPermissioned if true then the token is permissioned
      */
     event SetIsPermissioned(bool indexed isPermissioned);
@@ -93,7 +87,7 @@ interface IMToken is IERC20Upgradeable {
 
     /**
      * @notice mints mToken token `amount` to a given `to` address,
-     * requires the timelock to pass
+     * subject to the timelock delay of the contract admin role
      * should be called only from permissioned actor
      * @param to address to mint tokens to
      * @param amount amount to mint
@@ -102,8 +96,8 @@ interface IMToken is IERC20Upgradeable {
 
     /**
      * @notice burns mToken token `amount` from a given `from` address,
-     * bypassing blacklist checks.
-     * requires the timelock to pass
+     * bypassing blacklist and greenlist checks.
+     * subject to the timelock delay of the contract admin role
      * should be called only from permissioned actor
      * @param from address to burn tokens from
      * @param amount amount to burn

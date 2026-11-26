@@ -55,12 +55,12 @@ contract CustomAggregatorV3CompatibleFeedGrowth is
     uint256 public maxAnswerDeviation;
 
     /**
-     * @notice minimal possible answer that feed can return
+     * @notice minimal raw answer that can be submitted (without growth applied)
      */
     int192 public minAnswer;
 
     /**
-     * @notice maximal possible answer that feed can return
+     * @notice maximal raw answer that can be submitted (without growth applied)
      */
     int192 public maxAnswer;
 

@@ -75,7 +75,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
     bool public preferLoanLiquidity;
 
     /**
-     * @notice last loan request id
+     * @notice next loan request id
      */
     uint256 public currentLoanRequestId;
 
