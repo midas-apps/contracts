@@ -89,6 +89,12 @@ export const redeemInstantWithMTokenTest = async (
   const balanceBeforeVaultMTbill = await mTokenLoan.balanceOf(
     redemptionVaultWithMToken.address,
   );
+  const mTokenRedemptionVault =
+    await redemptionVaultWithMToken.redemptionVault();
+  const allowanceBeforeMTbill = await mTokenLoan.allowance(
+    redemptionVaultWithMToken.address,
+    mTokenRedemptionVault,
+  );
   const supplyBeforeMFone = await mTBILL.totalSupply();
   const supplyBeforeMTbill = await mTokenLoan.totalSupply();
 
@@ -114,6 +120,14 @@ export const redeemInstantWithMTokenTest = async (
   );
   const supplyAfterMFone = await mTBILL.totalSupply();
   const supplyAfterMTbill = await mTokenLoan.totalSupply();
+  const allowanceAfterMTbill = await mTokenLoan.allowance(
+    redemptionVaultWithMToken.address,
+    mTokenRedemptionVault,
+  );
+
+  // mToken RV burns mTokenLoan directly from the vault,
+  // so the vault should never grant it any allowance
+  expect(allowanceAfterMTbill).eq(allowanceBeforeMTbill);
 
   // mTBILL is always burned from user
   expect(balanceAfterUserMFone).eq(balanceBeforeUserMFone.sub(amountIn));

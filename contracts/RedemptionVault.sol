@@ -845,7 +845,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      * @param tokenOut tokenOut address
      * @param missingAmountBase18 gross amount of tokenOut to cover by the loan LP in base 18,
      * including the LP pro-rata fee portion
-     * @param totalAmount total amount of tokenOut needed in base 18
+     * @param totalAmount gross amount of tokenOut (payout + fee) in base 18, basis for the LP fee portion
      * @param tokenOutRate tokenOut rate
      * @param totalFee total fee of tokenOut
      * @param tokenOutDecimals decimals of tokenOut
@@ -940,7 +940,7 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
      * @param tokenOut tokenOut address
      * @param missingAmountBase18 gross amount of tokenOut to cover by the loan LP in base 18,
      * including the LP pro-rata fee portion
-     * @param totalAmount total amount of tokenOut needed in base 18
+     * @param totalAmount gross amount of tokenOut (payout + fee) in base 18, basis for the LP fee portion
      * @param tokenOutRate tokenOut rate
      * @param totalFee total fee of tokenOut
      * @param tokenOutDecimals decimals of tokenOut
@@ -1081,6 +1081,11 @@ contract RedemptionVault is ManageableVault, IRedemptionVault {
             uint256 mTokenRate,
             uint256 tokenOutRate
         ) = _convertMTokenToTokenOut(amountMTokenIn, 0, tokenOut, 0);
+
+        require(
+            _truncate(approximateAmountOut, _tokenDecimals(tokenOut)) > 0,
+            InvalidAmount()
+        );
 
         _tokenTransferFromUser(
             address(mToken),

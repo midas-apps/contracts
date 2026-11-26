@@ -1863,6 +1863,88 @@ export const redemptionVaultSuits = (
               );
             });
 
+            it('should not grant loan mToken allowance to loan swapper vault after redemptions through loan lp', async () => {
+              const {
+                owner,
+                redemptionVault,
+                stableCoins,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                dataFeed,
+                loanLp,
+                mTokenLoan,
+                redemptionVaultLoanSwapper,
+              } = await loadRvFixture();
+
+              await mintToken(mTBILL, owner, 200);
+              await mintToken(mTokenLoan, loanLp, 1000);
+              await approveBase18(loanLp, mTokenLoan, redemptionVault, 1000);
+              await mintToken(
+                stableCoins.dai,
+                redemptionVaultLoanSwapper,
+                1000,
+              );
+
+              await withdrawTest(
+                { vault: redemptionVault, owner },
+                stableCoins.dai,
+                await stableCoins.dai.balanceOf(redemptionVault.address),
+              );
+
+              await addPaymentTokenTest(
+                { vault: redemptionVault, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                0,
+                true,
+              );
+
+              await addPaymentTokenTest(
+                { vault: redemptionVaultLoanSwapper, owner },
+                stableCoins.dai,
+                dataFeed.address,
+                0,
+                true,
+              );
+
+              const vaultMTokenLoanBalanceBefore = await mTokenLoan.balanceOf(
+                redemptionVault.address,
+              );
+              const loanLpMTokenLoanBalanceBefore = await mTokenLoan.balanceOf(
+                loanLp.address,
+              );
+
+              // redeem twice to make sure that allowance does not accumulate
+              for (let i = 0; i < 2; i++) {
+                const loanRequestId =
+                  await redemptionVault.currentLoanRequestId();
+
+                await redeemInstantTest(
+                  { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+                  stableCoins.dai,
+                  100,
+                );
+
+                expect(await redemptionVault.currentLoanRequestId()).eq(
+                  loanRequestId.add(1),
+                );
+                expect(
+                  await mTokenLoan.allowance(
+                    redemptionVault.address,
+                    redemptionVaultLoanSwapper.address,
+                  ),
+                ).eq(0);
+              }
+
+              // loan mToken was pulled from loan lp and fully burned by the swapper vault
+              expect(await mTokenLoan.balanceOf(loanLp.address)).lt(
+                loanLpMTokenLoanBalanceBefore,
+              );
+              expect(await mTokenLoan.balanceOf(redemptionVault.address)).eq(
+                vaultMTokenLoanBalanceBefore,
+              );
+            });
+
             it('when 25% of liquidity on vault and 75% on loan lp: loan lp covers only the missing payout', async () => {
               const {
                 owner,
@@ -4952,6 +5034,49 @@ export const redemptionVaultSuits = (
             );
           });
 
+          it('should fail: when holdback part amount out truncates to zero in tokenOut decimals', async () => {
+            const {
+              owner,
+              redemptionVault,
+              stableCoins,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              regularAccounts,
+              dataFeed,
+            } = await loadRvFixture();
+
+            await mintToken(stableCoins.usdc6, redemptionVault, 100000);
+            await mintToken(mTBILL, regularAccounts[0], 1);
+            await approveBase18(regularAccounts[0], mTBILL, redemptionVault, 1);
+            await addPaymentTokenTest(
+              { vault: redemptionVault, owner },
+              stableCoins.usdc6,
+              dataFeed.address,
+              0,
+              true,
+            );
+
+            // holdback part is 0.01% of 0.001 mToken = 0.0000001 mToken,
+            // 0.0000001 mToken * 5 = 0.0000005 usdc6, which is below 1 unit
+            await redeemRequestTest(
+              {
+                redemptionVault,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                instantShare: 99_99,
+              },
+              stableCoins.usdc6,
+              0.001,
+              {
+                from: regularAccounts[0],
+                revertCustomError: {
+                  customErrorName: 'InvalidAmount',
+                },
+              },
+            );
+          });
+
           it('should fail: when instant share exceeds max instant share', async () => {
             const {
               owner,
@@ -5048,6 +5173,77 @@ export const redemptionVaultSuits = (
               revertCustomError: {
                 customErrorName: 'AmountLessThanMin',
               },
+            },
+          );
+        });
+
+        it('should fail: when amount out truncates to zero in tokenOut decimals', async () => {
+          const {
+            owner,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            mockedAggregatorMToken,
+            regularAccounts,
+          } = await loadRvFixture();
+
+          await mintToken(mTBILL, regularAccounts[0], 1);
+          await approveBase18(regularAccounts[0], mTBILL, redemptionVault, 1);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.usdc6,
+            dataFeed.address,
+            0,
+            true,
+          );
+          // 0.000001 mToken * 0.5 = 0.0000005 usdc6, which is below 1 unit
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 0.5);
+
+          await redeemRequestTest(
+            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+            stableCoins.usdc6,
+            0.000001,
+            {
+              from: regularAccounts[0],
+              revertCustomError: {
+                customErrorName: 'InvalidAmount',
+              },
+            },
+          );
+        });
+
+        it('redeem request when amount out is exactly 1 unit of tokenOut', async () => {
+          const {
+            owner,
+            redemptionVault,
+            stableCoins,
+            mTBILL,
+            dataFeed,
+            mTokenToUsdDataFeed,
+            mockedAggregatorMToken,
+            regularAccounts,
+          } = await loadRvFixture();
+
+          await mintToken(mTBILL, regularAccounts[0], 1);
+          await approveBase18(regularAccounts[0], mTBILL, redemptionVault, 1);
+          await addPaymentTokenTest(
+            { vault: redemptionVault, owner },
+            stableCoins.usdc6,
+            dataFeed.address,
+            0,
+            true,
+          );
+          // 0.000001 mToken * 1 = 0.000001 usdc6, which is exactly 1 unit
+          await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+
+          await redeemRequestTest(
+            { redemptionVault, owner, mTBILL, mTokenToUsdDataFeed },
+            stableCoins.usdc6,
+            0.000001,
+            {
+              from: regularAccounts[0],
             },
           );
         });

@@ -14,6 +14,7 @@ contract MorphoVaultMock is ERC20 {
     uint256 public exchangeRateNumerator;
     uint256 public constant RATE_PRECISION = 1e18;
     bool public shouldRevertDeposit;
+    uint256 public depositPullBps = 10_000;
 
     constructor(address _underlyingAsset) ERC20("MorphoVaultMock", "mvMOCK") {
         underlyingAsset = _underlyingAsset;
@@ -30,6 +31,10 @@ contract MorphoVaultMock is ERC20 {
 
     function setShouldRevertDeposit(bool _shouldRevert) external {
         shouldRevertDeposit = _shouldRevert;
+    }
+
+    function setDepositPullBps(uint256 bps) external {
+        depositPullBps = bps;
     }
 
     function withdrawAdmin(
@@ -54,7 +59,7 @@ contract MorphoVaultMock is ERC20 {
         IERC20(underlyingAsset).safeTransferFrom(
             msg.sender,
             address(this),
-            assets
+            (assets * depositPullBps) / 10_000
         );
         _mint(receiver, shares);
 

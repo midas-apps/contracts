@@ -111,6 +111,7 @@ contract RedemptionVaultWithUSTB is RedemptionVault {
             return 0;
         }
 
+        // not forceApprove: it pushes the contract over the code size limit
         ustb.safeIncreaseAllowance(address(_ustbRedemption), ustbToRedeem);
         _ustbRedemption.redeem(ustbToRedeem);
 

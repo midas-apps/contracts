@@ -18,6 +18,8 @@ contract USTBMock is ERC20, ISuperstateToken {
 
     address public override owner;
 
+    uint256 public subscribePullBps = 10_000;
+
     constructor() ERC20("USTB", "USTB") {
         owner = msg.sender;
     }
@@ -37,6 +39,10 @@ contract USTBMock is ERC20, ISuperstateToken {
 
     function mint(address to, uint256 amount) external {
         _mint(to, amount);
+    }
+
+    function setSubscribePullBps(uint256 bps) external {
+        subscribePullBps = bps;
     }
 
     function subscribe(
@@ -85,7 +91,7 @@ contract USTBMock is ERC20, ISuperstateToken {
         IERC20(stablecoin).safeTransferFrom(
             msg.sender,
             address(this),
-            inAmount
+            (inAmount * subscribePullBps) / 10_000
         );
         _mint(to, inAmount);
     }

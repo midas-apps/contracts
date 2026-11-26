@@ -252,6 +252,70 @@ redemptionVaultSuits(
           expect(daiAfter).to.be.gte(parseUnits('1000', 9));
         });
 
+        it('should not grant mToken allowance to mToken RV after redemptions', async () => {
+          const {
+            redemptionVaultWithMToken,
+            stableCoins,
+            mTokenLoan,
+            owner,
+            dataFeed,
+            redemptionVaultLoanSwapper,
+          } = await loadFixture(defaultDeploy);
+
+          await addPaymentTokenTest(
+            { vault: redemptionVaultWithMToken, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await addPaymentTokenTest(
+            { vault: redemptionVaultLoanSwapper, owner },
+            stableCoins.dai,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          await mintToken(mTokenLoan, redemptionVaultWithMToken, 10000);
+          await mintToken(
+            stableCoins.dai,
+            redemptionVaultLoanSwapper,
+            1_000_000,
+          );
+
+          // redeem twice to make sure that allowance does not accumulate
+          for (let i = 0; i < 2; i++) {
+            const mTokenLoanBefore = await mTokenLoan.balanceOf(
+              redemptionVaultWithMToken.address,
+            );
+            const daiBefore = await stableCoins.dai.balanceOf(
+              redemptionVaultWithMToken.address,
+            );
+
+            await redemptionVaultWithMToken.checkAndRedeemMToken(
+              stableCoins.dai.address,
+              daiBefore.add(parseUnits('1000', 9)),
+              parseUnits('1'),
+            );
+
+            expect(
+              await mTokenLoan.balanceOf(redemptionVaultWithMToken.address),
+            ).lt(mTokenLoanBefore);
+            expect(
+              await stableCoins.dai.balanceOf(
+                redemptionVaultWithMToken.address,
+              ),
+            ).gt(daiBefore);
+            expect(
+              await mTokenLoan.allowance(
+                redemptionVaultWithMToken.address,
+                redemptionVaultLoanSwapper.address,
+              ),
+            ).eq(0);
+          }
+        });
+
         it('should not be 1 wei short when nested tokenOut conversion floors twice', async () => {
           const {
             redemptionVaultWithMToken,
