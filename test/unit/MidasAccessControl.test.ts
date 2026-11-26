@@ -454,6 +454,114 @@ describe('MidasAccessControl', function () {
     });
   });
 
+  describe('initializeV2() user facing roles', () => {
+    const CUSTOM_USER_FACING_ROLE = ethers.utils.id('CUSTOM_USER_FACING_ROLE');
+
+    const deployAccessControlForReinit = async () => {
+      const [, admin] = await ethers.getSigners();
+      const accessControl = await deployProxyContract<MidasAccessControl>(
+        'MidasAccessControl',
+        [0, []],
+        'initialize',
+      );
+
+      await setProxyAdmin(accessControl.address, admin.address);
+      await setInitializedVersion(accessControl.address, 1);
+
+      return { accessControl, admin };
+    };
+
+    it('sets additional user facing roles on fresh initialize', async () => {
+      const accessControl = await deployProxyContract<MidasAccessControl>(
+        'MidasAccessControl',
+        [0, [CUSTOM_USER_FACING_ROLE]],
+        'initialize',
+      );
+
+      expect(await accessControl.isUserFacingRole(CUSTOM_USER_FACING_ROLE)).eq(
+        true,
+      );
+      expect(await accessControl.isUserFacingRole(constants.HashZero)).eq(
+        false,
+      );
+    });
+
+    it('sets additional user facing roles on reinitialize', async () => {
+      const { accessControl, admin } = await deployAccessControlForReinit();
+
+      await accessControl
+        .connect(admin)
+        .initializeV2(0, [CUSTOM_USER_FACING_ROLE]);
+
+      expect(await accessControl.isUserFacingRole(CUSTOM_USER_FACING_ROLE)).eq(
+        true,
+      );
+      expect(await accessControl.isUserFacingRole(constants.HashZero)).eq(
+        false,
+      );
+    });
+
+    it('should fail: when fresh initialize has DEFAULT_ADMIN_ROLE as user facing role', async () => {
+      const factory = await ethers.getContractFactory('MidasAccessControl');
+      const impl = await factory.deploy();
+      await impl.deployed();
+
+      const initData = factory.interface.encodeFunctionData('initialize', [
+        0,
+        [CUSTOM_USER_FACING_ROLE, constants.HashZero],
+      ]);
+      const proxyFactory = await ethers.getContractFactory('ERC1967Proxy');
+
+      await expect(proxyFactory.deploy(impl.address, initData))
+        .to.be.revertedWithCustomError(impl, 'UnexpectedRole')
+        .withArgs(constants.HashZero);
+    });
+
+    it('should fail: when reinitialize has DEFAULT_ADMIN_ROLE as user facing role', async () => {
+      const { accessControl, admin } = await deployAccessControlForReinit();
+
+      await expect(
+        accessControl.connect(admin).initializeV2(0, [constants.HashZero]),
+      )
+        .to.be.revertedWithCustomError(accessControl, 'UnexpectedRole')
+        .withArgs(constants.HashZero);
+
+      expect(await accessControl.isUserFacingRole(constants.HashZero)).eq(
+        false,
+      );
+    });
+
+    it('should fail: when reinitialize has DEFAULT_ADMIN_ROLE as one of multiple user facing roles (nothing is updated)', async () => {
+      const { accessControl, admin } = await deployAccessControlForReinit();
+
+      await expect(
+        accessControl
+          .connect(admin)
+          .initializeV2(3600, [CUSTOM_USER_FACING_ROLE, constants.HashZero]),
+      )
+        .to.be.revertedWithCustomError(accessControl, 'UnexpectedRole')
+        .withArgs(constants.HashZero);
+
+      expect(await accessControl.isUserFacingRole(CUSTOM_USER_FACING_ROLE)).eq(
+        false,
+      );
+      expect(await accessControl.isUserFacingRole(constants.HashZero)).eq(
+        false,
+      );
+      expect(await accessControl.defaultDelay()).eq(0);
+
+      // still can be reinitialized with valid roles
+      await accessControl
+        .connect(admin)
+        .initializeV2(3600, [CUSTOM_USER_FACING_ROLE]);
+
+      expect(await accessControl.isUserFacingRole(CUSTOM_USER_FACING_ROLE)).eq(
+        true,
+      );
+      expect(await accessControl.defaultDelay()).eq(3600);
+    });
+  });
+
   describe('renounceRole()', () => {
     it('should fail: function is forbidden', async () => {
       const { accessControl } = await loadFixture(defaultDeploy);
@@ -1112,6 +1220,130 @@ describe('MidasAccessControl', function () {
         .withArgs(roles.common.defaultAdmin);
     });
 
+    it('should fail: when new admin role is user facing', async () => {
+      const { accessControl, roles } = await loadFixture(defaultDeploy);
+
+      await expect(
+        accessControl.setRoleAdmin(
+          roles.common.blacklisted,
+          roles.common.greenlisted,
+        ),
+      )
+        .revertedWithCustomError(accessControl, 'UserFacingRoleNotAllowed')
+        .withArgs(roles.common.greenlisted);
+
+      expect(await accessControl.getRoleAdmin(roles.common.blacklisted)).eq(
+        roles.common.blacklistedOperator,
+      );
+    });
+
+    it('should fail: when new admin role is the user facing role itself', async () => {
+      const { accessControl, roles } = await loadFixture(defaultDeploy);
+
+      await expect(
+        accessControl.setRoleAdmin(
+          roles.common.blacklisted,
+          roles.common.blacklisted,
+        ),
+      )
+        .revertedWithCustomError(accessControl, 'UnexpectedRole')
+        .withArgs(roles.common.blacklisted);
+
+      expect(await accessControl.getRoleAdmin(roles.common.blacklisted)).eq(
+        roles.common.blacklistedOperator,
+      );
+    });
+
+    it('should fail: when list operator without DEFAULT_ADMIN_ROLE sets user facing role as admin', async () => {
+      const { accessControl, roles, owner, regularAccounts } =
+        await loadFixture(defaultDeploy);
+
+      await grantRoleTester(
+        { accessControl, owner },
+        roles.common.greenlistedOperator,
+        regularAccounts[0].address,
+      );
+
+      await expect(
+        accessControl
+          .connect(regularAccounts[0])
+          .setRoleAdmin(roles.common.greenlisted, roles.common.blacklisted),
+      )
+        .revertedWithCustomError(accessControl, 'UserFacingRoleNotAllowed')
+        .withArgs(roles.common.blacklisted);
+
+      await expect(
+        accessControl
+          .connect(regularAccounts[0])
+          .setRoleAdmin(roles.common.greenlisted, roles.common.greenlisted),
+      )
+        .revertedWithCustomError(accessControl, 'UnexpectedRole')
+        .withArgs(roles.common.greenlisted);
+
+      // list role is still managed by its operator role
+      await grantRoleTester(
+        { accessControl, owner },
+        roles.common.greenlisted,
+        regularAccounts[1].address,
+      );
+    });
+
+    it('should fail: when new admin role was marked as user facing, and succeeds once unmarked', async () => {
+      const { accessControl, owner, roles } = await loadFixture(defaultDeploy);
+
+      const NEW_ADMIN_ROLE = ethers.utils.id('NEW_ADMIN_ROLE');
+
+      await setIsUserFacingRoleTester({ accessControl, owner }, [
+        { role: NEW_ADMIN_ROLE, enabled: true },
+      ]);
+
+      await expect(
+        accessControl.setRoleAdmin(roles.common.blacklisted, NEW_ADMIN_ROLE),
+      )
+        .revertedWithCustomError(accessControl, 'UserFacingRoleNotAllowed')
+        .withArgs(NEW_ADMIN_ROLE);
+
+      await setIsUserFacingRoleTester({ accessControl, owner }, [
+        { role: NEW_ADMIN_ROLE, enabled: false },
+      ]);
+
+      await accessControl.setRoleAdmin(
+        roles.common.blacklisted,
+        NEW_ADMIN_ROLE,
+      );
+
+      expect(await accessControl.getRoleAdmin(roles.common.blacklisted)).eq(
+        NEW_ADMIN_ROLE,
+      );
+    });
+
+    it('should fail: when new admin role is the role itself and is not user facing', async () => {
+      const { accessControl, roles } = await loadFixture(defaultDeploy);
+
+      const TEST_ROLE = ethers.utils.id('TEST_ROLE');
+
+      await expect(accessControl.setRoleAdmin(TEST_ROLE, TEST_ROLE))
+        .revertedWithCustomError(accessControl, 'UnexpectedRole')
+        .withArgs(TEST_ROLE);
+
+      expect(await accessControl.getRoleAdmin(TEST_ROLE)).eq(
+        roles.common.defaultAdmin,
+      );
+    });
+
+    it('when new admin role is DEFAULT_ADMIN_ROLE', async () => {
+      const { accessControl, roles } = await loadFixture(defaultDeploy);
+
+      await accessControl.setRoleAdmin(
+        roles.common.blacklisted,
+        roles.common.defaultAdmin,
+      );
+
+      expect(await accessControl.getRoleAdmin(roles.common.blacklisted)).eq(
+        roles.common.defaultAdmin,
+      );
+    });
+
     it('should emit RoleAdminChanged and update getRoleAdmin', async () => {
       const { accessControl, roles } = await loadFixture(defaultDeploy);
 
@@ -1242,6 +1474,70 @@ describe('MidasAccessControl', function () {
 
       await setIsUserFacingRoleTester({ accessControl, owner }, [
         { role: roles.common.blacklistedOperator, enabled: false },
+      ]);
+    });
+
+    it('should fail: when role is DEFAULT_ADMIN_ROLE and enabled is true', async () => {
+      const { accessControl, owner, roles } = await loadFixture(defaultDeploy);
+
+      await setIsUserFacingRoleTester(
+        { accessControl, owner },
+        [{ role: roles.common.defaultAdmin, enabled: true }],
+        {
+          revertCustomError: {
+            customErrorName: 'UnexpectedRole',
+            args: [roles.common.defaultAdmin],
+          },
+        },
+      );
+
+      expect(
+        await accessControl.isUserFacingRole(roles.common.defaultAdmin),
+      ).eq(false);
+    });
+
+    it('should fail: when role is DEFAULT_ADMIN_ROLE and enabled is false', async () => {
+      const { accessControl, owner, roles } = await loadFixture(defaultDeploy);
+
+      await setIsUserFacingRoleTester(
+        { accessControl, owner },
+        [{ role: roles.common.defaultAdmin, enabled: false }],
+        {
+          revertCustomError: {
+            customErrorName: 'UnexpectedRole',
+            args: [roles.common.defaultAdmin],
+          },
+        },
+      );
+    });
+
+    it('should fail: when DEFAULT_ADMIN_ROLE is one of multiple roles (nothing is updated)', async () => {
+      const { accessControl, owner, roles } = await loadFixture(defaultDeploy);
+
+      await setIsUserFacingRoleTester(
+        { accessControl, owner },
+        [
+          { role: roles.common.greenlistedOperator, enabled: true },
+          { role: roles.common.defaultAdmin, enabled: true },
+        ],
+        {
+          revertCustomError: {
+            customErrorName: 'UnexpectedRole',
+            args: [roles.common.defaultAdmin],
+          },
+        },
+      );
+
+      expect(
+        await accessControl.isUserFacingRole(roles.common.greenlistedOperator),
+      ).eq(false);
+      expect(
+        await accessControl.isUserFacingRole(roles.common.defaultAdmin),
+      ).eq(false);
+
+      // admin still can manage user facing roles
+      await setIsUserFacingRoleTester({ accessControl, owner }, [
+        { role: roles.common.greenlistedOperator, enabled: true },
       ]);
     });
 
