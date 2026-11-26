@@ -227,14 +227,16 @@ Global manager for pausing and unpausing protocol functions. Pausing can be appl
 **Key Features:**
 
 - Global pause, per-contract pause and per-function pause
-- Separate roles for pausing and unpausing
-- Configurable delays for pause and unpause
+- Single pause admin role for both pausing and unpausing; pause-only or unpause-only access can be granted per function
+- Contract admin can pause and unpause its own contract. Contract pause is a single flag, so it can also lift a contract pause set by the pause admin
+- Separate configurable delays for pause and unpause
 
 **Key Functions:**
 
 - `globalPause()` / `globalUnpause()` - pause or unpause the whole protocol
 - `bulkPauseContract()` / `bulkUnpauseContract()` - pause or unpause entire contracts
 - `bulkPauseContractFn()` / `bulkUnpauseContractFn()` - pause or unpause individual functions (by selector), so only the affected operations are stopped
+- `contractAdminPause()` / `contractAdminUnpause()` - pause or unpause a contract by its own contract admin
 - `isPaused()` / `isFunctionPaused()` - view the current pause status
 
 ### mTokens
