@@ -198,6 +198,10 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
     mTokenParam(),
     vaultVersionParam(),
   ],
+  'deploy:post:set:greenlist-operator': [
+    deployPost('set_GreenlistOperator'),
+    mTokenParam(),
+  ],
   'deploy:post:pause:functions': [
     deployPost('pause_Functions'),
     mTokenParam(),

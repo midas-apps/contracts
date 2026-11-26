@@ -151,6 +151,12 @@ To revoke the legacy (v1) roles of an mToken that are replaced in v2 (`--mtoken`
 yarn deploy:post:revoke:legacy-roles --network <network> --mtoken <mtoken>
 ```
 
+To set the dedicated operator (role admin) of an mToken greenlist role (`customGreenlistOperatorRoleNames` in `helpers/roles.ts`, e.g. `RADIAL_GREENLIST_OPERATOR_ROLE` shared by radUSD and radYC). Does nothing if it is already set on-chain:
+
+```bash
+yarn deploy:post:set:greenlist-operator --network <network> --mtoken <mtoken>
+```
+
 #### If deploying to an existing network
 
 For each command below, include `--network` and `--mtoken`:
@@ -266,7 +272,7 @@ Both vault versions (add `--vault-version <v1|v2>`):
 v2 vaults only:
 
 - `yarn deploy:format-log [LOG_PATH] [--print]`: format the log of a deploy / post-deploy run (latest `logs/log-*.log` by default) into a Linear-ready list of txs with the Fordefi tx id and the timelock operation id of timelocked txs, copied to the clipboard
-- `yarn deploy:post:sync`: sync the whole product config of the network with on-chain state in one run. Runs the post-deploy steps below (roles, vault settings, payment tokens, fee waived, greenlist, limits, token config, feed settings, expected answers, pauses) with sending replaced by recording, merges bulk calls from the same wallet (`grantRoleMult`, `revokeRoleMult`, `bulkPauseContract`, `bulkPauseContractFn`), then sends. Nothing is sent if a step fails. `--dry-run true` only prints the txs. Not synced: `setRoundData`, `set:sanctionsList`, LayerZero, Axelar. To sync a new setting, add it to an existing step or add a step to `syncSteps` in `post-deploy/sync_MToken.ts`
+- `yarn deploy:post:sync`: sync the whole product config of the network with on-chain state in one run. Runs the post-deploy steps below (roles, greenlist operator, vault settings, payment tokens, fee waived, greenlist, limits, token config, feed settings, expected answers, pauses) with sending replaced by recording, merges bulk calls from the same wallet (`grantRoleMult`, `revokeRoleMult`, `bulkPauseContract`, `bulkPauseContractFn`), then sends. Nothing is sent if a step fails. `--dry-run true` only prints the txs. Not synced: `setRoundData`, `set:sanctionsList`, LayerZero, Axelar. To sync a new setting, add it to an existing step or add a step to `syncSteps` in `post-deploy/sync_MToken.ts`
 - `yarn deploy:post:set:feed-settings`: sync mToken feeds with `genericConfigs`: custom aggregators (`customAggregator`, `customAggregatorDv/Rv`: min/max answer, max answer deviation, growth APR bounds and `onlyUp`) and data feeds (`healthyDiff`). Only fields set in the config are synced; expected answers are synced by `set:expected-answers`
 - `yarn deploy:post:set:vaultsettings`: sync the settings of deployed vaults with their deploy config (`dv`, `rv`, ...): min amount, instant fee and its bounds, max instant share, variation tolerance, max approve request id, sequential request processing, tokens receiver, sanctions list, DV min first deposit and max amount per request, RV request redeemer. Only fields set in the config are synced
 - `yarn deploy:post:set:waived`: waive vault fee for an address (`addFeeWaived`)

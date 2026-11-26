@@ -150,6 +150,21 @@ export const customGreenlistRoleNames: Partial<Record<MTokenName, string>> = {
 };
 
 /**
+ * Operator (role admin) of a token-level greenlist role. Keyed by the
+ * greenlist role source token, so the products sharing the greenlist role
+ * share its operator too (radYC -> radUSD). Token-level greenlist roles
+ * not listed here stay administered by `DEFAULT_ADMIN_ROLE`
+ */
+export const customGreenlistOperatorRoleNames: Partial<
+  Record<MTokenName, string>
+> = {
+  radUSD: 'RADIAL_GREENLIST_OPERATOR_ROLE',
+};
+
+const getGreenlistRoleSource = (token: MTokenName): MTokenName =>
+  sharedGreenlistRoleSource[token] ?? token;
+
+/**
  * Greenlist role of a product: the common `GREENLISTED_ROLE` unless the
  * product is listed in `tokenLevelGreenlistTokens`
  */
@@ -158,13 +173,24 @@ const getGreenlistRoleName = (token: MTokenName): string => {
     return getRolesNamesCommon().greenlisted;
   }
 
-  const greenlistToken = sharedGreenlistRoleSource[token] ?? token;
+  const greenlistToken = getGreenlistRoleSource(token);
   if (customGreenlistRoleNames[greenlistToken]) {
     return customGreenlistRoleNames[greenlistToken]!;
   }
   const restPrefix =
     greenlistToken === 'mTBILL' ? '' : prefixes[greenlistToken] + '_';
   return `${restPrefix}GREENLISTED_ROLE`;
+};
+
+/**
+ * Dedicated operator of the product token-level greenlist role, if any
+ */
+const getGreenlistOperatorRoleName = (
+  token: MTokenName,
+): string | undefined => {
+  if (!tokenLevelGreenlistTokens.includes(token)) return undefined;
+
+  return customGreenlistOperatorRoleNames[getGreenlistRoleSource(token)];
 };
 
 type TokenRoles = {
@@ -175,6 +201,8 @@ type TokenRoles = {
   redemptionVaultAdmin: string;
   customFeedAdmin: string;
   greenlisted: string;
+  /** set only for the products with a dedicated greenlist operator role */
+  greenlistedOperator?: string;
   minBalanceExempt: string;
 };
 
@@ -209,6 +237,7 @@ export const getRolesNamesForToken = (token: MTokenName): TokenRoles => {
 
   const tokenPrefix = prefixes[token];
   const restPrefix = isMTBILL ? '' : tokenPrefix + '_';
+  const greenlistedOperator = getGreenlistOperatorRoleName(token);
 
   return {
     minter: `${tokenPrefix}_MINT_OPERATOR_ROLE`,
@@ -218,6 +247,7 @@ export const getRolesNamesForToken = (token: MTokenName): TokenRoles => {
     depositVaultAdmin: `${restPrefix}DEPOSIT_VAULT_ADMIN_ROLE`,
     redemptionVaultAdmin: `${restPrefix}REDEMPTION_VAULT_ADMIN_ROLE`,
     greenlisted: getGreenlistRoleName(token),
+    ...(greenlistedOperator ? { greenlistedOperator } : {}),
     minBalanceExempt: `${tokenPrefix}_MIN_BALANCE_EXEMPT_ROLE`,
   };
 };

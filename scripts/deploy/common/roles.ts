@@ -283,6 +283,7 @@ export const grantAllProductRoles = async (
       batch: typeof grants,
       v1Style: boolean,
       comment: string,
+      batchKey?: string,
     ) => {
       if (!batch.length) return;
 
@@ -300,6 +301,7 @@ export const grantAllProductRoles = async (
         action: 'update-ac',
         subAction: 'grant-token-roles',
         comment,
+        batchKey,
         // v2 call on a v1 access control: only succeeds after the upgrade
         skipPrediction: isV1 && !v1Style,
         changes: batch.map(({ role, account }) => ({
@@ -325,7 +327,24 @@ export const grantAllProductRoles = async (
         `grant ${token} delayed roles (requires AC v2)`,
       );
     } else {
-      await sendGrant(grants, false, `grant all ${token} roles`);
+      // `grantRoleMult` requires the same admin role for all the roles of a call
+      const byAdmin = new Map<string, typeof grants>();
+      for (const grant of grants) {
+        const admin = await accessControl.getRoleAdmin(grant.role);
+        byAdmin.set(admin, [...(byAdmin.get(admin) ?? []), grant]);
+      }
+
+      for (const [admin, batch] of byAdmin) {
+        await sendGrant(
+          batch,
+          false,
+          byAdmin.size > 1
+            ? `grant ${token} roles administered by ${roleName(admin)}`
+            : `grant all ${token} roles`,
+          // grants under different admins must not be merged back by the sync
+          `roleAdmin:${admin}`,
+        );
+      }
     }
   }
 

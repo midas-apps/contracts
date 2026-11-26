@@ -467,11 +467,14 @@ const sendAndWaitForCustomTxSignDirect = async (
       | 'set-mtoken-deposits-enabled'
       | 'set-ustb-deposits-enabled'
       | 'set-user-facing-roles'
+      | 'set-role-admin'
       | 'set-function-permissions';
     /** skip the signer's tx simulation, e.g. for a call valid only after an upgrade */
     skipPrediction?: boolean;
     /** on-chain fields changed by the tx, for the sync report. Not sent to the signer */
     changes?: FieldChange[];
+    /** sync only merges bulk calls with the same key. Not sent to the signer */
+    batchKey?: string;
   },
   safe?: string,
   confirmations = 2,
@@ -482,6 +485,7 @@ const sendAndWaitForCustomTxSignDirect = async (
 
   const signerMetadata = { ...(txSignMetadata ?? {}) };
   delete signerMetadata.changes;
+  delete signerMetadata.batchKey;
 
   const transaction = {
     data: populatedTx.data!,

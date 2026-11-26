@@ -86,6 +86,7 @@ export const batchTxs = (txs: PlannedTx[]) => {
       planned.metadata?.action,
       planned.metadata?.mToken,
       planned.alwaysTimelocked,
+      planned.metadata?.batchKey,
       batcher.key?.(args),
     ].join('|');
 
