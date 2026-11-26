@@ -355,7 +355,7 @@ contract MidasAxelarVaultExecutable is
      * @notice function to redeem from Midas vault
      * @param _receiver the address to receive the paymentToken
      * @param _mTokenAmount the amount of mTokens to redeem
-     * @param _minReceiveAmount the minimum amount of paymentToken to receive
+     * @param _minReceiveAmount the minimum amount of paymentToken to receive (decimals 18)
      * @return paymentTokenAmount the amount of paymentToken received
      */
     function _redeem(
