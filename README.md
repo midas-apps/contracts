@@ -363,7 +363,7 @@ Manages the redemption process for mTokens. Burns mTokens from a user and transf
 **Key Features:**
 
 - Instant redemptions - user receive payment tokens atomically
-- Request-based redemptions - tokens are burned from user in one transaction and payment tokens are transferred in a second tx initiated by vault admin
+- Request-based redemptions - mTokens are transferred from user to the request redeemer in one transaction; they are burned and payment tokens are transferred in a second tx initiated by vault admin. Rejecting a request does not return the mTokens
 - Separate liquidity source for request-based operations
 
 **Key Functions:**
