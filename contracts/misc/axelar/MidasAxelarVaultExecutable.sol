@@ -121,16 +121,16 @@ contract MidasAxelarVaultExecutable is
      */
     function initialize() external initializer {
         /// @dev Approve the vault to spend the paymentToken held by this contract
-        IERC20(paymentTokenErc20).approve(
+        IERC20(paymentTokenErc20).forceApprove(
             address(depositVault),
             type(uint256).max
         );
-        IERC20(mTokenErc20).approve(
+        IERC20(mTokenErc20).forceApprove(
             address(redemptionVault),
             type(uint256).max
         );
 
-        IERC20(paymentTokenErc20).approve(
+        IERC20(paymentTokenErc20).forceApprove(
             interchainTokenService,
             type(uint256).max
         );
