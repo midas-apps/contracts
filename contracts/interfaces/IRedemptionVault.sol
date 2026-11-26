@@ -234,7 +234,7 @@ interface IRedemptionVault is IManageableVault {
 
     /**
      * @notice creating redeem request
-     * Transfers amount in mToken to contract
+     * Transfers amount in mToken to `requestRedeemer`
      * @param tokenOut stable coin token address to redeem to
      * @param amountMTokenIn amount of mToken to redeem (decimals 18)
      * @return request id
@@ -328,7 +328,7 @@ interface IRedemptionVault is IManageableVault {
 
     /**
      * @notice approving redeem request
-     * Burns amount mToken from contract
+     * Burns amount mToken from `requestRedeemer`
      * Transfers tokenOut to user
      * Sets flag Processed
      * @param requestId request id
@@ -343,7 +343,7 @@ interface IRedemptionVault is IManageableVault {
 
     /**
      * @notice rejecting request
-     * Sets request flag to Canceled.
+     * Sets request flag to Canceled. Does not return mToken to user
      * @param requestId request id
      */
     function rejectRequest(uint256 requestId) external;

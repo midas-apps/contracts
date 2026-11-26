@@ -227,14 +227,16 @@ Global manager for pausing and unpausing protocol functions. Pausing can be appl
 **Key Features:**
 
 - Global pause, per-contract pause and per-function pause
-- Separate roles for pausing and unpausing
-- Configurable delays for pause and unpause
+- Single pause admin role for both pausing and unpausing; pause-only or unpause-only access can be granted per function
+- Contract admin can pause and unpause its own contract. Contract pause is a single flag, so it can also lift a contract pause set by the pause admin
+- Separate configurable delays for pause and unpause
 
 **Key Functions:**
 
 - `globalPause()` / `globalUnpause()` - pause or unpause the whole protocol
 - `bulkPauseContract()` / `bulkUnpauseContract()` - pause or unpause entire contracts
 - `bulkPauseContractFn()` / `bulkUnpauseContractFn()` - pause or unpause individual functions (by selector), so only the affected operations are stopped
+- `contractAdminPause()` / `contractAdminUnpause()` - pause or unpause a contract by its own contract admin
 - `isPaused()` / `isFunctionPaused()` - view the current pause status
 
 ### mTokens
@@ -246,7 +248,8 @@ Base contract for all mToken implementations
 **Key Features:**
 
 - Minting and burning functionality (role-protected)
-- Pausable transfers - transfers are gated by the global [`MidasPauseManager`](contracts/access/MidasPauseManager.sol) (function-level pause), on top of `ERC20PausableUpgradeable`
+- Pausable transfers - transfers, mints and burns are gated only by the global [`MidasPauseManager`](contracts/access/MidasPauseManager.sol) (global, contract or function-level pause). The inherited `ERC20PausableUpgradeable` is a leftover from the v1 contracts that cannot be removed (storage layout); its pause is not used, so `paused()` does not reflect the pause state
+- A global or contract pause also blocks `clawback()`, `mintGoverned()` and `burnGoverned()`; a function-level pause keeps them available
 - Blacklist functionality - blacklisted users cannot send or receive any tokens
 - Configurable maximum supply cap (`maxSupplyCap`), enforced on every mint
 - Per-token mint rate limits (windowed)
@@ -363,7 +366,7 @@ Manages the redemption process for mTokens. Burns mTokens from a user and transf
 **Key Features:**
 
 - Instant redemptions - user receive payment tokens atomically
-- Request-based redemptions - tokens are burned from user in one transaction and payment tokens are transferred in a second tx initiated by vault admin
+- Request-based redemptions - mTokens are transferred from user to the request redeemer in one transaction; they are burned and payment tokens are transferred in a second tx initiated by vault admin. Rejecting a request does not return the mTokens
 - Separate liquidity source for request-based operations
 
 **Key Functions:**

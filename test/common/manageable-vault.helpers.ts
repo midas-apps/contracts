@@ -97,6 +97,11 @@ export const calculateWindowRateLimitCapacity = ({
 }: WindowRateLimitCapacityParams): WindowRateLimitCapacity => {
   const elapsed = BigNumber.from(now).sub(lastUpdated);
   const windowBn = BigNumber.from(window);
+
+  if (elapsed.gte(windowBn)) {
+    return { inFlight: BigNumber.from(0), remaining: BigNumber.from(limit) };
+  }
+
   const divisor = windowBn.isZero() ? BigNumber.from(1) : windowBn;
 
   const decay = mulDiv(limit, elapsed, divisor);

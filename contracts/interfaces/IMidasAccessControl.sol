@@ -275,9 +275,10 @@ interface IMidasAccessControl is IAccessControlUpgradeable {
 
     /**
      * @notice set the admin role for a specific role
-     * @dev can be called only by the address that holds `DEFAULT_ADMIN_ROLE`
+     * @dev can be called only by the address that holds the current admin role of `role`.
+     * `DEFAULT_ADMIN_ROLE` admin cannot be changed
      * @param role the role to set the admin role for
-     * @param newAdminRole the new admin role
+     * @param newAdminRole the new admin role. Cannot be `role` itself or a user facing role
      */
     function setRoleAdmin(bytes32 role, bytes32 newAdminRole) external;
 
