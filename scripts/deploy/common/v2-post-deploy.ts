@@ -6,8 +6,8 @@ import {
 } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
-import type { DeployDvConfig } from './dv';
-import type { DeployRvConfig } from './rv';
+import type { DeployDvConfig, DeployDvUsycConfig } from './dv';
+import type { DeployRvConfig, DeployRvUsycConfig } from './rv';
 import type { DeploymentConfig } from './types';
 import {
   getContractAt,
@@ -29,9 +29,11 @@ import {
   DepositVault,
   DepositVaultWithMToken,
   DepositVaultWithUSTB,
+  DepositVaultWithUSYC,
   ManageableVault,
   MToken,
   RedemptionVault,
+  RedemptionVaultWithUSYC,
 } from '../../../typechain-types';
 import { getDeploymentConfigForToken } from '../configs';
 import { getDeploymentTokenAddresses } from '../configs/deployment-profiles';
@@ -367,12 +369,38 @@ const v2VaultConfigKeys: [V2VaultConfigKey, V2VaultType][] = [
   ['dvAave', 'depositVaultAave'],
   ['dvMorpho', 'depositVaultMorpho'],
   ['dvMToken', 'depositVaultMToken'],
+  ['dvUsyc', 'depositVaultUsyc'],
   ['rv', 'redemptionVault'],
   ['rvUstb', 'redemptionVaultUstb'],
   ['rvAave', 'redemptionVaultAave'],
   ['rvMorpho', 'redemptionVaultMorpho'],
   ['rvMToken', 'redemptionVaultMToken'],
+  ['rvUsyc', 'redemptionVaultUsyc'],
 ];
+
+/**
+ * Resolves a USYC vault link (`dvUsyc.redemptionVault` /
+ * `rvUsyc.depositVault`): an address or a v2 vault of another mToken
+ */
+const resolveUsycLinkedVault = (
+  hre: HardhatRuntimeEnvironment,
+  link:
+    | NonNullable<DeployDvUsycConfig['redemptionVault']>
+    | NonNullable<DeployRvUsycConfig['depositVault']>,
+) => {
+  if (typeof link === 'string') return link;
+
+  const vaultType =
+    'redemptionVaultType' in link
+      ? link.redemptionVaultType
+      : link.depositVaultType;
+  const address = getCurrentAddresses(hre, 'v2')?.[link.mToken]?.[vaultType];
+
+  if (!address) {
+    throw new Error(`${link.mToken} ${vaultType}V2 address is not configured`);
+  }
+  return address;
+};
 
 const isSameValue = (current: unknown, target: unknown) => {
   if (BigNumber.isBigNumber(current)) {
@@ -560,6 +588,52 @@ export const setVaultSettings = async (
         rvConfig.requestRedeemer,
         () => rv.requestRedeemer(),
         (v) => rv.populateTransaction.setRequestRedeemer(v),
+      );
+    }
+
+    if (configKey === 'dvUsyc') {
+      const dvConfig = config as DeployDvUsycConfig;
+      const dv = (await getContractAt(
+        hre,
+        'DepositVaultWithUSYC',
+        address,
+      )) as DepositVaultWithUSYC;
+
+      await sync(
+        'anticipatedFeeRate',
+        dvConfig.anticipatedFeeRate,
+        () => dv.anticipatedFeeRate(),
+        (v) => dv.populateTransaction.setAnticipatedFeeRate(v),
+      );
+      await sync(
+        'redemptionVault',
+        dvConfig.redemptionVault &&
+          resolveUsycLinkedVault(hre, dvConfig.redemptionVault),
+        () => dv.redemptionVault(),
+        (v) => dv.populateTransaction.setRedemptionVault(v),
+      );
+    }
+
+    if (configKey === 'rvUsyc') {
+      const rvConfig = config as DeployRvUsycConfig;
+      const rv = (await getContractAt(
+        hre,
+        'RedemptionVaultWithUSYC',
+        address,
+      )) as RedemptionVaultWithUSYC;
+
+      await sync(
+        'anticipatedFeeRate',
+        rvConfig.anticipatedFeeRate,
+        () => rv.anticipatedFeeRate(),
+        (v) => rv.populateTransaction.setAnticipatedFeeRate(v),
+      );
+      await sync(
+        'depositVault',
+        rvConfig.depositVault &&
+          resolveUsycLinkedVault(hre, rvConfig.depositVault),
+        () => rv.depositVault(),
+        (v) => rv.populateTransaction.setDepositVault(v),
       );
     }
   }

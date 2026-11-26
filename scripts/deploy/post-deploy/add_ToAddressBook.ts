@@ -2,9 +2,12 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { MTokenName } from '../../../config';
 import {
+  allVaultTypes,
   getCurrentAddresses,
   LayerZeroTokenAddresses,
   TokenAddresses,
+  VaultType,
+  VaultVersion,
 } from '../../../config/constants/addresses';
 import { DeployFunction } from '../common/types';
 import {
@@ -59,6 +62,28 @@ const ADDRESS_BOOK_MAPPING: Partial<
       }`,
     extractAddress: (v) => (v as LayerZeroTokenAddresses)?.oft,
   },
+};
+
+const VAULT_NAME_PREFIXES = ['Minter Vault', 'Redemption Vault'];
+
+/**
+ * Marks v2 vaults in the name: `Minter Vault (Morpho)` ->
+ * `Minter Vault v2 (Morpho)`
+ */
+const toVersionedVaultName = (
+  contractName: string,
+  key: string,
+  vaultVersion?: VaultVersion,
+) => {
+  if (vaultVersion !== 'v2' || !allVaultTypes.includes(key as VaultType)) {
+    return contractName;
+  }
+
+  const prefix = VAULT_NAME_PREFIXES.find((p) => contractName.startsWith(p));
+
+  return prefix
+    ? `${prefix} v2${contractName.slice(prefix.length)}`
+    : contractName;
 };
 
 const func: DeployFunction = async (
@@ -119,10 +144,13 @@ const func: DeployFunction = async (
       continue;
     }
 
-    const contractName =
+    const contractName = toVersionedVaultName(
       typeof config.contractName === 'function'
         ? config.contractName(mToken, hre.network.name)
-        : config.contractName;
+        : config.contractName,
+      key,
+      hre.vaultVersion,
+    );
 
     const customSigner = await hre.getCustomSigner();
     const result = await customSigner.createAddressBookContract({

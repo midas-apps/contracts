@@ -245,6 +245,17 @@ const foreachFeeWaiveAddress = async (
   for (const vault of networkConfig) {
     assertVaultTypeSupported(hre, vault.fromVault.type);
 
+    // a vault of another mToken may be not deployed yet
+    if (
+      vault.fromVault.mToken !== token &&
+      !getVaultAddress(hre, vault.fromVault.mToken, vault.fromVault.type)
+    ) {
+      console.warn(
+        `WARN: ${vault.fromVault.mToken} ${vault.fromVault.type} is not deployed, its fee waivers are skipped`,
+      );
+      continue;
+    }
+
     const vaultContract = await getVaultContract(
       hre,
       provider,
@@ -316,9 +327,8 @@ const foreachVaultPaymentToken = async (
   }
 };
 
-const getVaultContract = async (
+const getVaultAddress = (
   hre: HardhatRuntimeEnvironment,
-  provider: Provider | Signer,
   mToken: MTokenName,
   vaultType: VaultType,
 ) => {
@@ -331,7 +341,16 @@ const getVaultContract = async (
       )
     : undefined;
 
-  const vaultAddress = tokenAddresses?.[vaultType];
+  return tokenAddresses?.[vaultType];
+};
+
+const getVaultContract = async (
+  hre: HardhatRuntimeEnvironment,
+  provider: Provider | Signer,
+  mToken: MTokenName,
+  vaultType: VaultType,
+) => {
+  const vaultAddress = getVaultAddress(hre, mToken, vaultType);
 
   if (!vaultAddress) {
     throw new Error('Vault address is not found');

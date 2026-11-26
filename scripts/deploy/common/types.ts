@@ -206,14 +206,7 @@ export type PaymentTokenDeploymentConfig = {
 export const DEFAULT_CLAWBACK_RECEIVER =
   '0xD0cc216d848dbFC1b083031A7486d0CAdaf4EcDa' as const;
 
-/** `type(uint32).max`: disables the delay (see MidasAuthLibrary.NO_DELAY) */
-export const NO_DELAY = 0xffffffff;
-
-/** `0`: no override, falls back to the role/default delay (see MidasAuthLibrary.NULL_DELAY) */
-export const NULL_DELAY = 0;
-
-/** pause delay of MidasPauseManager, the same for all the networks: pausing is instant */
-export const PAUSE_DELAY = NO_DELAY;
+export { NO_DELAY, NULL_DELAY, PAUSE_DELAY } from './delays';
 
 export type NetworkDeploymentConfig = Record<
   number,
