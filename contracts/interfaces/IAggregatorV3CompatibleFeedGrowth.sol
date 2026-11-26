@@ -124,7 +124,7 @@ interface IAggregatorV3CompatibleFeedGrowth is AggregatorV3Interface {
      * @notice returns `latestRoundData` without growth applied
      *
      * @return roundId roundId
-     * @return answer answer with growth applied
+     * @return answer answer without growth applied
      * @return startedAt startedAt
      * @return updatedAt updatedAt
      * @return answeredInRound answeredInRound
@@ -155,7 +155,7 @@ interface IAggregatorV3CompatibleFeedGrowth is AggregatorV3Interface {
      * @param _roundId roundId
      *
      * @return roundId roundId
-     * @return answer answer with growth applied
+     * @return answer answer without growth applied
      * @return startedAt startedAt
      * @return updatedAt updatedAt
      * @return answeredInRound answeredInRound
