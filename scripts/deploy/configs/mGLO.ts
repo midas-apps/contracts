@@ -290,7 +290,7 @@ export const mGLODeploymentConfig: DeploymentConfig = {
           data: parseUnits('1', 8),
         },
         // Ethereum OFT adapter. Outbound rate limit per day: 15M to Base and
-        // Robinhood (on-chain value), 5M to Optimism, 1M to Monad and X Layer.
+        // Robinhood (on-chain value), 5M to Optimism and X Layer, 1M to Monad.
         layerZero: {
           delegate: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
           owner: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
@@ -313,7 +313,7 @@ export const mGLODeploymentConfig: DeploymentConfig = {
                 window: hours(24),
               },
               xlayer: {
-                limit: parseUnits('1000000'),
+                limit: parseUnits('5000000'),
                 window: hours(24),
               },
             },
@@ -555,13 +555,13 @@ export const mGLODeploymentConfig: DeploymentConfig = {
         setRoundData: {
           data: parseUnits('1.01137228', 8),
         },
-        // Non-origin-chain OFT adapter. Outbound rate limit to Mainnet is 500k/day.
+        // Non-origin-chain OFT adapter. Outbound rate limit to Mainnet is 5M/day.
         layerZero: {
           delegate: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
           owner: '0xB60842E9DaBCd1C52e354ac30E82a97661cB7E89',
           rateLimitConfig: {
             default: {
-              limit: parseUnits('500000'),
+              limit: parseUnits('5000000'),
               window: hours(24),
             },
           },

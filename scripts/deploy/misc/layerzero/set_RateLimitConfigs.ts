@@ -1,3 +1,4 @@
+import { formatUnits } from 'ethers/lib/utils';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import {
@@ -69,6 +70,7 @@ const func: DeployFunction = async (
   );
 
   const rateLimitConfigs: RateLimiter.RateLimitConfigStruct[] = [];
+  const descriptions: string[] = [];
 
   for (const network of networksToRateLimit) {
     const configBase =
@@ -89,6 +91,11 @@ const func: DeployFunction = async (
         limit: configBase.limit,
         window: configBase.window,
       });
+      descriptions.push(
+        `${network} ${formatUnits(await configBase.limit)}/${(
+          await configBase.window
+        ).toString()}s`,
+      );
     } else {
       console.log(`Rate limit config for network ${network} is up to date`);
       continue;
@@ -108,6 +115,9 @@ const func: DeployFunction = async (
     {
       action: 'update-lz',
       subAction: 'set-lz-rate-limit-configs',
+      comment: `set ${mToken} layerzero rate limits: ${descriptions.join(
+        ', ',
+      )}`,
     },
     await contract.owner(),
   );
