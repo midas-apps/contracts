@@ -466,6 +466,70 @@ depositVaultSuits(
           );
         });
 
+        it('should fail: vault does not consume the whole allowance, fallback enabled', async () => {
+          const {
+            owner,
+            depositVaultWithMorpho,
+            stableCoins,
+            mTBILL,
+            mTokenToUsdDataFeed,
+            regularAccounts,
+            dataFeed,
+            morphoVaultMock,
+          } = await loadFixture(defaultDeploy);
+
+          await setMorphoDepositsEnabledTest(
+            { depositVaultWithMorpho, owner },
+            true,
+          );
+          await setAutoInvestFallbackEnabledMorphoTest(
+            { depositVaultWithMorpho, owner },
+            true,
+          );
+          await setMorphoVaultTest(
+            { depositVaultWithMorpho, owner },
+            stableCoins.usdc.address,
+            morphoVaultMock.address,
+          );
+
+          await mintToken(stableCoins.usdc, regularAccounts[0], 100);
+          await approveBase18(
+            regularAccounts[0],
+            stableCoins.usdc,
+            depositVaultWithMorpho,
+            100,
+          );
+          await addPaymentTokenTest(
+            { vault: depositVaultWithMorpho, owner },
+            stableCoins.usdc,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setMinAmountTest({ vault: depositVaultWithMorpho, owner }, 10);
+
+          await morphoVaultMock.setDepositPullBps(9_000);
+
+          await depositInstantWithMorphoTest(
+            {
+              depositVaultWithMorpho,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              morphoVaultMock,
+              expectedMorphoDeposited: false,
+            },
+            stableCoins.usdc,
+            100,
+            {
+              from: regularAccounts[0],
+              revertCustomError: {
+                customErrorName: 'AllowanceNotConsumed',
+              },
+            },
+          );
+        });
+
         it('should fail: when Morpho deposit mints zero shares', async () => {
           const {
             owner,

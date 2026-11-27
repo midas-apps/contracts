@@ -12,6 +12,7 @@ import {
   PaymentTokenNameEnum,
   rpcUrls,
 } from '../config';
+import { libraryNames } from '../config/constants/addresses';
 
 export const DAY = 86400;
 
@@ -30,6 +31,7 @@ const contractNameToPath = {
     'CustomAggregatorV3CompatibleFeedGrowth',
     'DataFeed',
   ],
+  libraries: [...libraryNames] as string[],
   root: ['mToken'],
 };
 

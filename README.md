@@ -144,7 +144,7 @@ The protocol is built around a few simple ideas:
 
 1. User initiates the redemption
 2. Vault calculates exchange rate and fees. For exchange rates vault calls data feeds for both payment token and mToken
-3. Vault transfers fees from user to the fee recipient and burns the remaining of mTokens
+3. Vault burns the full amount of mTokens, the fee is deducted from the payout and retained in payment tokens
 4. For instant redemptions (sync): Payment tokens are transferred to user immediately
 5. For request redemptions (async): Admin fulfills the request after off-chain processing
 
@@ -227,14 +227,16 @@ Global manager for pausing and unpausing protocol functions. Pausing can be appl
 **Key Features:**
 
 - Global pause, per-contract pause and per-function pause
-- Separate roles for pausing and unpausing
-- Configurable delays for pause and unpause
+- Single pause admin role for both pausing and unpausing; pause-only or unpause-only access can be granted per function
+- Contract admin can pause and unpause its own contract. Contract pause is a single flag, so it can also lift a contract pause set by the pause admin
+- Separate configurable delays for pause and unpause
 
 **Key Functions:**
 
 - `globalPause()` / `globalUnpause()` - pause or unpause the whole protocol
 - `bulkPauseContract()` / `bulkUnpauseContract()` - pause or unpause entire contracts
 - `bulkPauseContractFn()` / `bulkUnpauseContractFn()` - pause or unpause individual functions (by selector), so only the affected operations are stopped
+- `contractAdminPause()` / `contractAdminUnpause()` - pause or unpause a contract by its own contract admin
 - `isPaused()` / `isFunctionPaused()` - view the current pause status
 
 ### mTokens
@@ -246,7 +248,8 @@ Base contract for all mToken implementations
 **Key Features:**
 
 - Minting and burning functionality (role-protected)
-- Pausable transfers - transfers are gated by the global [`MidasPauseManager`](contracts/access/MidasPauseManager.sol) (function-level pause), on top of `ERC20PausableUpgradeable`
+- Pausable transfers - transfers, mints and burns are gated only by the global [`MidasPauseManager`](contracts/access/MidasPauseManager.sol) (global, contract or function-level pause). The inherited `ERC20PausableUpgradeable` is a leftover from the v1 contracts that cannot be removed (storage layout); its pause is not used, so `paused()` does not reflect the pause state
+- A global or contract pause also blocks `clawback()`, `mintGoverned()` and `burnGoverned()`; a function-level pause keeps them available
 - Blacklist functionality - blacklisted users cannot send or receive any tokens
 - Configurable maximum supply cap (`maxSupplyCap`), enforced on every mint
 - Per-token mint rate limits (windowed)
@@ -312,7 +315,7 @@ There are 2 types of vaults - Deposit vaults and Redemption vaults. Also each ty
 - Chainalysis sanction list integration
 - Minimal mToken amount for instant/request operations
 - Daily limits for instant operations
-- Vault Allowance - limits the total amount of mTokens that a vault can mint or redeem. It is a risk-control mechanism managed by the vault admin and is independent from token supply caps.
+- Vault Allowance - limits the total amount of each payment token that a vault can accept on mint or pay out on redeem. It is a risk-control mechanism managed by the vault admin and is independent from token supply caps.
 
 #### Instant vs Request-Based Operations
 
@@ -363,7 +366,7 @@ Manages the redemption process for mTokens. Burns mTokens from a user and transf
 **Key Features:**
 
 - Instant redemptions - user receive payment tokens atomically
-- Request-based redemptions - tokens are burned from user in one transaction and payment tokens are transferred in a second tx initiated by vault admin
+- Request-based redemptions - mTokens are transferred from user to the request redeemer in one transaction; they are burned and payment tokens are transferred in a second tx initiated by vault admin. Rejecting a request does not return the mTokens
 - Separate liquidity source for request-based operations
 
 **Key Functions:**

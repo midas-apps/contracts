@@ -6,6 +6,7 @@ import {
   AddPaymentTokensConfig,
   SetAaveConfigConfig,
   SetMorphoConfigConfig,
+  SetUsycConfigConfig,
 } from './common-vault';
 import {
   DeployCustomAggregatorAdjustedConfig,
@@ -19,6 +20,7 @@ import {
   DeployDvMTokenConfig,
   DeployDvRegularConfig,
   DeployDvUstbConfig,
+  DeployDvUsycConfig,
 } from './dv';
 import type { GreenlistConfig } from './greenlist';
 import {
@@ -32,6 +34,7 @@ import {
   DeployRvRegularConfig,
   DeployRvSwapperConfig,
   DeployRvUstbConfig,
+  DeployRvUsycConfig,
 } from './rv';
 import { DeployTimelockConfig } from './timelock';
 import type { DeployTokenConfig } from './token';
@@ -119,6 +122,7 @@ export type PostDeployConfig = {
   axelarIts?: AxelarItsConfig;
   setAaveConfig?: SetAaveConfigConfig;
   setMorphoConfig?: SetMorphoConfigConfig;
+  setUsycConfig?: SetUsycConfigConfig;
   // v2 only
   instantLimits?: InstantLimitsConfig;
   mintRateLimits?: MintRateLimitsConfig;
@@ -131,6 +135,10 @@ export type PostDeployConfig = {
 
 export type DeploymentConfig = {
   genericConfigs: {
+    mToken?: {
+      // TODO: add support
+      maxSupplyCap?: BigNumberish;
+    };
     customAggregator?: DeployCustomAggregatorConfig;
     customAggregatorDv?: DeployCustomAggregatorConfig;
     customAggregatorRv?: DeployCustomAggregatorConfig;
@@ -157,12 +165,14 @@ export type DeploymentConfig = {
       dvAave?: DeployDvAaveConfig;
       dvMorpho?: DeployDvMorphoConfig;
       dvMToken?: DeployDvMTokenConfig;
+      dvUsyc?: DeployDvUsycConfig;
       rv?: DeployRvRegularConfig;
       rvSwapper?: DeployRvSwapperConfig;
       rvAave?: DeployRvAaveConfig;
       rvMorpho?: DeployRvMorphoConfig;
       rvMToken?: DeployRvMTokenConfig;
       rvUstb?: DeployRvUstbConfig;
+      rvUsyc?: DeployRvUsycConfig;
       token?: DeployTokenConfig;
       postDeploy?: PostDeployConfig;
     }
@@ -196,14 +206,7 @@ export type PaymentTokenDeploymentConfig = {
 export const DEFAULT_CLAWBACK_RECEIVER =
   '0xD0cc216d848dbFC1b083031A7486d0CAdaf4EcDa' as const;
 
-/** `type(uint32).max`: disables the delay (see MidasAuthLibrary.NO_DELAY) */
-export const NO_DELAY = 0xffffffff;
-
-/** `0`: no override, falls back to the role/default delay (see MidasAuthLibrary.NULL_DELAY) */
-export const NULL_DELAY = 0;
-
-/** pause delay of MidasPauseManager, the same for all the networks: pausing is instant */
-export const PAUSE_DELAY = NO_DELAY;
+export { NO_DELAY, NULL_DELAY, PAUSE_DELAY } from './delays';
 
 export type NetworkDeploymentConfig = Record<
   number,

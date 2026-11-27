@@ -88,6 +88,12 @@ contract DepositVaultWithAave is DepositVault {
     error AutoInvestFailed(bytes err);
 
     /**
+     * @notice when allowance set for aave invest
+     * is not fully consumed
+     */
+    error AllowanceNotConsumed();
+
+    /**
      * @notice Passes role identifiers to the base DepositVault constructor
      * @param _contractAdminRole contract admin role identifier
      * @param _greenlistedRole greenlisted role identifier
@@ -211,13 +217,16 @@ contract DepositVaultWithAave is DepositVault {
             tokensDecimals
         );
 
-        IERC20(tokenIn).safeIncreaseAllowance(address(pool), transferredAmount);
+        IERC20(tokenIn).forceApprove(address(pool), transferredAmount);
 
-        try
-            pool.supply(tokenIn, transferredAmount, tokensReceiver, 0)
-        {} catch (bytes memory error) {
+        try pool.supply(tokenIn, transferredAmount, tokensReceiver, 0) {
+            require(
+                IERC20(tokenIn).allowance(address(this), address(pool)) == 0,
+                AllowanceNotConsumed()
+            );
+        } catch (bytes memory error) {
             if (autoInvestFallbackEnabled) {
-                IERC20(tokenIn).safeApprove(address(pool), 0);
+                IERC20(tokenIn).forceApprove(address(pool), 0);
                 IERC20(tokenIn).safeTransfer(tokensReceiver, transferredAmount);
             } else {
                 revert AutoInvestFailed(error);

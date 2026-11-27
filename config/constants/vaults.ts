@@ -5,14 +5,16 @@ export type RedemptionVaultType =
   | 'redemptionVaultMToken'
   | 'redemptionVaultUstb'
   | 'redemptionVaultAave'
-  | 'redemptionVaultMorpho';
+  | 'redemptionVaultMorpho'
+  | 'redemptionVaultUsyc';
 
 export type DepositVaultType =
   | 'depositVault'
   | 'depositVaultUstb'
   | 'depositVaultAave'
   | 'depositVaultMorpho'
-  | 'depositVaultMToken';
+  | 'depositVaultMToken'
+  | 'depositVaultUsyc';
 
 /**
  * Base (un-postfixed) vault key. In the addresses object the un-postfixed
@@ -28,7 +30,10 @@ export const isVaultVersion = (value: unknown): value is VaultVersion =>
   typeof value === 'string' &&
   (vaultVersions as readonly string[]).includes(value);
 
-/** Vault types that have no v2 implementation */
+/**
+ * Vault types that have no v2 implementation. USYC vaults are the opposite:
+ * they exist only in v2, so they are listed in `v2VaultTypes` only
+ */
 export type V1OnlyVaultType = 'redemptionVaultSwapper' | 'redemptionVaultBuidl';
 
 export type V2VaultType = Exclude<VaultType, V1OnlyVaultType>;
@@ -58,11 +63,18 @@ export const v2VaultTypes: readonly V2VaultType[] = [
   'depositVaultAave',
   'depositVaultMorpho',
   'depositVaultMToken',
+  'depositVaultUsyc',
   'redemptionVault',
   'redemptionVaultMToken',
   'redemptionVaultUstb',
   'redemptionVaultAave',
   'redemptionVaultMorpho',
+  'redemptionVaultUsyc',
+];
+
+/** Every base vault key, regardless of the versions it exists in */
+export const allVaultTypes: readonly VaultType[] = [
+  ...new Set<VaultType>([...v1VaultTypes, ...v2VaultTypes]),
 ];
 
 export const isV2VaultType = (value: unknown): value is V2VaultType =>
@@ -84,7 +96,7 @@ export const getVaultKey = (
 };
 
 const allVaultKeys = new Set<string>([
-  ...v1VaultTypes,
+  ...allVaultTypes,
   ...v2VaultTypes.map(toV2VaultKey),
 ]);
 

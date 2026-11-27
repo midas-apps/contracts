@@ -56,7 +56,10 @@ import {
   GetUpgradeTxParams,
   proposeTimeLockUpgradeTx,
 } from '../../deploy/common/timelock';
-import { getDeployer } from '../../deploy/common/utils';
+import {
+  getDeployer,
+  getLinkedContractFactory,
+} from '../../deploy/common/utils';
 import { paymentTokenDeploymentConfigs } from '../../deploy/configs/payment-tokens';
 import { upgradeConfigs } from '../configs/upgrade-configs';
 
@@ -1362,6 +1365,17 @@ const upgradeAllContractsRaw = async (
       continue;
     }
 
+    const { factory, opts } = await getLinkedContractFactory(
+      hre,
+      contractName,
+      deployer,
+      {
+        redeployImplementation: 'onchange',
+        getTxResponse: true,
+        constructorArgs,
+      },
+    );
+
     // implementation reused from the manifest is deployed at or before it
     const startBlock = await hre.ethers.provider.getBlockNumber();
 
@@ -1370,15 +1384,7 @@ const upgradeAllContractsRaw = async (
       isFirstUse,
       address: implementationAddress,
     } = await getImplAddressFromDeployment(
-      await hre.upgrades.prepareUpgrade(
-        proxyAddress,
-        await hre.ethers.getContractFactory(contractName, deployer),
-        {
-          redeployImplementation: 'onchange',
-          getTxResponse: true,
-          constructorArgs,
-        },
-      ),
+      await hre.upgrades.prepareUpgrade(proxyAddress, factory, opts),
       startBlock,
     );
 

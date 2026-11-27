@@ -199,6 +199,65 @@ depositVaultSuits(
           );
         });
 
+        it('should fail: USTB does not consume the whole allowance', async () => {
+          const {
+            owner,
+            depositVaultWithUSTB,
+            stableCoins,
+            mTBILL,
+            mTokenToUsdDataFeed,
+            regularAccounts,
+            dataFeed,
+            ustbToken,
+          } = await loadFixture(defaultDeploy);
+
+          await setUstbDepositsEnabledTest(
+            {
+              depositVaultWithUSTB,
+              owner,
+            },
+            true,
+          );
+          await setMockUstbStablecoinConfig({ ustbToken }, stableCoins.usdc);
+
+          await mintToken(stableCoins.usdc, regularAccounts[0], 100);
+          await approveBase18(
+            regularAccounts[0],
+            stableCoins.usdc,
+            depositVaultWithUSTB,
+            100,
+          );
+          await addPaymentTokenTest(
+            { vault: depositVaultWithUSTB, owner },
+            stableCoins.usdc,
+            dataFeed.address,
+            0,
+            true,
+          );
+          await setMinAmountTest({ vault: depositVaultWithUSTB, owner }, 10);
+
+          await ustbToken.setSubscribePullBps(9_000);
+
+          await depositInstantWithUstbTest(
+            {
+              depositVaultWithUSTB,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              ustbToken,
+              expectedUstbDeposited: false,
+            },
+            stableCoins.usdc,
+            100,
+            {
+              from: regularAccounts[0],
+              revertCustomError: {
+                customErrorName: 'AllowanceNotConsumed',
+              },
+            },
+          );
+        });
+
         it('deposit 100 USDC when ustbDepositsEnabled is true', async () => {
           const {
             owner,

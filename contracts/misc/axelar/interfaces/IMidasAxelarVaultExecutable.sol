@@ -117,6 +117,7 @@ interface IMidasAxelarVaultExecutable {
      * @param _mTokenAmount the amount of m tokens to redeem
      * @param _data encoded data for the redemption
      * Expected data: abi.encode(bytes receiver,uint256 minReceiveAmount,string receiverChainName);
+     * `minReceiveAmount` is the minimum amount of paymentToken to receive (decimals 18)
      */
     function redeemAndSend(uint256 _mTokenAmount, bytes calldata _data)
         external

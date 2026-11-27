@@ -54,6 +54,12 @@ contract DepositVaultWithUSTB is DepositVault {
     error USTBFeeNotZero(uint256 fee);
 
     /**
+     * @notice when allowance set for ustb invest
+     * is not fully consumed
+     */
+    error AllowanceNotConsumed();
+
+    /**
      * @notice Passes role identifiers to the base DepositVault constructor
      * @param _contractAdminRole contract admin role identifier
      * @param _greenlistedRole greenlisted role identifier
@@ -176,11 +182,15 @@ contract DepositVaultWithUSTB is DepositVault {
             tokensDecimals
         );
 
-        IERC20(tokenIn).safeIncreaseAllowance(ustbToken, transferredAmount);
+        IERC20(tokenIn).forceApprove(ustbToken, transferredAmount);
         ISuperstateToken(ustbToken).subscribe(
             tokensReceiver,
             transferredAmount,
             tokenIn
+        );
+        require(
+            IERC20(tokenIn).allowance(address(this), address(ustbToken)) == 0,
+            AllowanceNotConsumed()
         );
     }
 }

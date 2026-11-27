@@ -2,7 +2,10 @@ import { BigNumberish, constants, utils } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
 import { chainIds, MTokenName } from '../../../config';
-import { networkUptimeFeeds } from '../../../config/constants/addresses';
+import {
+  midasAddressesPerNetwork,
+  networkUptimeFeeds,
+} from '../../../config/constants/addresses';
 import { mTokensMetadata } from '../../../helpers/mtokens-metadata';
 import { getAllUserFacingRoles } from '../../../helpers/roles';
 import { DEFAULT_CLAWBACK_RECEIVER } from '../../deploy/common/types';
@@ -164,6 +167,40 @@ export const v2CoreUpgrade = (
  */
 export const upgradeConfigs: UpgradeConfig = {
   upgrades: {
+    'radyc-upgrade': {
+      vaults: {
+        [chainIds.sepolia]: {
+          overrides: {
+            radUSD: {
+              overrides: {
+                redemptionVault: true,
+              },
+            },
+            radYC: {
+              all: true,
+            },
+          },
+        },
+      },
+    },
+    'radusd-upgrade': {
+      vaults: {
+        [chainIds.sepolia]: {
+          overrides: {
+            radUSD: {
+              overrides: {
+                redemptionVault: {
+                  initializer: 'initializeV2',
+                  initializerArgs: [
+                    midasAddressesPerNetwork.sepolia!.radUSD!.dataFeedRv,
+                  ],
+                },
+              },
+            },
+          },
+        },
+      },
+    },
     'v2-core-upgrade': {
       contracts: {
         [chainIds.bsc]: v2CoreUpgrade(

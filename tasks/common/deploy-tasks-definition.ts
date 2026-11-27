@@ -6,6 +6,7 @@ import {
   dryRunParam,
   feedTargetParam,
   keysParam,
+  libParam,
   mTokenParam,
   originalNetworkParam,
   ParseParamFn,
@@ -39,6 +40,7 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
   'deploy:timelock:controller': [deploy('deploy_TimelockController')],
   'deploy:timelock': [deploy('deploy_TimeLock'), skipValidationParam(true)],
   'deploy:token': [deploy('deploy_Token'), mTokenParam()],
+  'deploy:library': [deploy('deploy_Library'), libParam()],
   'deploy:aggregator': [
     deploy('deploy_CustomAggregator'),
     mTokenParam(),
@@ -89,6 +91,11 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
     mTokenParam(),
     v2VaultsOnlyParam(),
   ],
+  'deploy:dv:usyc': [
+    deploy('deploy_DVUsyc'),
+    mTokenParam(),
+    v2VaultsOnlyParam(),
+  ],
   'deploy:rv': [deploy('deploy_RV'), mTokenParam(), v2VaultsOnlyParam()],
   'deploy:rv:aave': [
     deploy('deploy_RVAave'),
@@ -107,6 +114,11 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
   ],
   'deploy:rv:mtoken': [
     deploy('deploy_RVMToken'),
+    mTokenParam(),
+    v2VaultsOnlyParam(),
+  ],
+  'deploy:rv:usyc': [
+    deploy('deploy_RVUsyc'),
     mTokenParam(),
     v2VaultsOnlyParam(),
   ],
@@ -186,6 +198,10 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
     mTokenParam(),
     vaultVersionParam(),
   ],
+  'deploy:post:set:greenlist-operator': [
+    deployPost('set_GreenlistOperator'),
+    mTokenParam(),
+  ],
   'deploy:post:pause:functions': [
     deployPost('pause_Functions'),
     mTokenParam(),
@@ -220,6 +236,16 @@ const deployTasksRecord: Record<string, DeploymentTask> = {
     deployPost('set_MorphoConfig'),
     mTokenParam(),
     vaultVersionParam(),
+  ],
+  'deploy:post:set:usycconfig': [
+    deployPost('set_UsycConfig'),
+    mTokenParam(),
+    v2VaultsOnlyParam(),
+  ],
+  'deploy:post:set:usycpairedvaults': [
+    deployPost('set_UsycPairedVaults'),
+    mTokenParam(),
+    v2VaultsOnlyParam(),
   ],
 
   // v2 only

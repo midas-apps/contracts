@@ -181,6 +181,12 @@ export const redeemInstantTest = async (
   const supplyBeforeLoanLp = loanSwapperVaultMToken
     ? await loanSwapperVaultMToken.totalSupply()
     : constants.Zero;
+  const allowanceBeforeLoanSwapperVault = loanSwapperVaultMToken
+    ? await loanSwapperVaultMToken.allowance(
+        redemptionVault.address,
+        loanSwapperVault,
+      )
+    : constants.Zero;
   const balanceBeforeVault = (
     await tokenContract.balanceOf(redemptionVault.address)
   ).add((await additionalLiquidity?.()) ?? constants.Zero);
@@ -280,6 +286,12 @@ export const redeemInstantTest = async (
   const supplyAfterLoanLp = loanSwapperVaultMToken
     ? await loanSwapperVaultMToken.totalSupply()
     : constants.Zero;
+  const allowanceAfterLoanSwapperVault = loanSwapperVaultMToken
+    ? await loanSwapperVaultMToken.allowance(
+        redemptionVault.address,
+        loanSwapperVault,
+      )
+    : constants.Zero;
 
   const balanceAfterTokenOutRecipient = await tokenContract.balanceOf(
     recipient,
@@ -340,6 +352,10 @@ export const redeemInstantTest = async (
     expect(lastLoanRequestIdAfter).eq(lastLoanRequestIdBefore);
   }
 
+  // loan swapper vault burns the loan mToken directly from the vault,
+  // so the vault should never grant it any allowance
+  expect(allowanceAfterLoanSwapperVault).eq(allowanceBeforeLoanSwapperVault);
+
   for (const [index, limit] of instantLimitsBefore.entries()) {
     expectEqWithOneWeiTolerance(
       instantLimitsAfter[index].inFlight,
@@ -388,6 +404,8 @@ export const tokenOutAmountToMTokenAmount = (
 };
 
 const convertMTokenToTokenOutBase18 = mTokenAmountToTokenOutAmount;
+
+const ceilDiv = (a: BigNumber, b: BigNumber) => a.add(b.sub(1)).div(b);
 
 export const redeemRequestTest = async (
   {
@@ -1868,13 +1886,23 @@ export const estimateSendTokensFromLiquidity = async (
       obtainedVaultLiquidityBase18,
     );
 
-    if (newBalanceBase18.lt(totalAmountBase18)) {
+    // fee stays in the vault, so only the payout has to be covered in cash
+    if (newBalanceBase18.lt(amountTokenOutWithoutFeeBase18)) {
+      // gross up so that the LP delivers exactly the missing cash
+      // after its pro-rata fee share is deducted
+      const grossMissingAmountBase18 = ceilDiv(
+        amountTokenOutWithoutFeeBase18
+          .sub(newBalanceBase18)
+          .mul(totalAmountBase18),
+        amountTokenOutWithoutFeeBase18,
+      );
+
       ({
         amountReceivedBase18: usedLpLiquidityBase18,
         feePortionBase18: lpFeePortionBase18,
         mTokenAmount: toTransferFromLpMToken,
       } = await estimateUseLoanLpLiquidity(
-        totalAmountBase18.sub(newBalanceBase18),
+        grossMissingAmountBase18,
         totalAmountBase18,
         feeAmountBase18,
       ));

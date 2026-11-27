@@ -121,16 +121,16 @@ contract MidasAxelarVaultExecutable is
      */
     function initialize() external initializer {
         /// @dev Approve the vault to spend the paymentToken held by this contract
-        IERC20(paymentTokenErc20).approve(
+        IERC20(paymentTokenErc20).forceApprove(
             address(depositVault),
             type(uint256).max
         );
-        IERC20(mTokenErc20).approve(
+        IERC20(mTokenErc20).forceApprove(
             address(redemptionVault),
             type(uint256).max
         );
 
-        IERC20(paymentTokenErc20).approve(
+        IERC20(paymentTokenErc20).forceApprove(
             interchainTokenService,
             type(uint256).max
         );
@@ -355,7 +355,7 @@ contract MidasAxelarVaultExecutable is
      * @notice function to redeem from Midas vault
      * @param _receiver the address to receive the paymentToken
      * @param _mTokenAmount the amount of mTokens to redeem
-     * @param _minReceiveAmount the minimum amount of paymentToken to receive
+     * @param _minReceiveAmount the minimum amount of paymentToken to receive (decimals 18)
      * @return paymentTokenAmount the amount of paymentToken received
      */
     function _redeem(

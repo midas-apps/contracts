@@ -89,6 +89,7 @@ Also confirm verification settings in `.env` are correct if you expect automatic
 - `--network <network_name>`: required for all scripts
 - `--mtoken <mToken_name>`: required for product deployment scripts
 - `--ptoken <pToken_name>`: required for payment-token specific scripts
+- `--lib <library_name>`: required for library deployment script
 - `--vault-version <v1|v2>`: required for scripts that work with both vault versions (see below)
 
 ### Vault versions
@@ -150,6 +151,12 @@ To revoke the legacy (v1) roles of an mToken that are replaced in v2 (`--mtoken`
 yarn deploy:post:revoke:legacy-roles --network <network> --mtoken <mtoken>
 ```
 
+To set the dedicated operator (role admin) of an mToken greenlist role (`customGreenlistOperatorRoleNames` in `helpers/roles.ts`, e.g. `RADIAL_GREENLIST_OPERATOR_ROLE` shared by radUSD and radYC). Does nothing if it is already set on-chain:
+
+```bash
+yarn deploy:post:set:greenlist-operator --network <network> --mtoken <mtoken>
+```
+
 #### If deploying to an existing network
 
 For each command below, include `--network` and `--mtoken`:
@@ -179,6 +186,55 @@ yarn deploy:rv:mtoken
 ```
 
 Add each deployed vault address under its `V2` key in `config/constants/addresses.ts`.
+
+#### Libraries
+
+Some contracts are linked against external libraries (for example, `RedemptionVaultWithUSYC` uses `VaultsWithUSYCLibrary`). A library is deployed once per network:
+
+```bash
+yarn hardhat deploy:library --network <network> --lib <library_name>
+```
+
+Add the deployed address to the `libraries` section of the network addresses ([`config/constants/addresses.ts`](../../config/constants/addresses.ts)):
+
+```ts
+arc: {
+  libraries: {
+    VaultsWithUSYCLibrary: '0x...',
+  },
+},
+```
+
+Proxy deployments detect the libraries a contract links against from its artifact and link them automatically. If a required library address is missing, the script fails before deploying.
+
+#### USYC vaults
+
+The USYC Teller address is taken from `usycTellerContracts`. Deploy the library first (see [Libraries](#libraries)), then the redemption vault, so the deposit vault can use it as `tokensReceiver` and as its paired vault:
+
+```bash
+yarn hardhat deploy:rv:usyc --network <network> --mtoken <mToken>
+# add `redemptionVaultUsycV2` to the addresses file
+yarn hardhat deploy:dv:usyc --network <network> --mtoken <mToken>
+# add `depositVaultUsycV2` to the addresses file
+```
+
+Config keys are `rvUsyc` (`type: 'USYC'`, optional `depositVault`, `anticipatedFeeRate`) and `dvUsyc` (`type: 'USYC'`, optional `redemptionVault`, `anticipatedFeeRate`). `depositVault` / `redemptionVault` are the mToken vaults used to convert USDC to and from the mToken, they take either an address or a `{ mToken, depositVaultType | redemptionVaultType }` reference.
+
+`anticipatedFeeRate` is the fee rate the Teller is expected to charge the vault itself (1e18 = 1%): `subscriptionFeeRate(depositVaultUsyc)` for the deposit vault, `redemptionFeeRate(redemptionVaultUsyc)` for the redemption vault. A vault only uses USYC when its own rate matches and, if a paired vault is set, the rate the Teller charges the paired vault matches the `anticipatedFeeRate` of that vault. Without a paired vault only the vault's own rate is validated.
+
+The paired vault is the other USYC vault of the same mToken and is not configured: a deployment looks it up in the addresses file (`redemptionVaultUsycV2` for the deposit vault, `depositVaultUsycV2` for the redemption vault, address profiles included). If it is not deployed yet, the vault is deployed unpaired; if more than one is found, the deployment fails. The vaults reference each other, so the vault deployed first is always unpaired. Once both addresses are in the addresses file, pair them:
+
+```bash
+yarn hardhat deploy:post:set:usycpairedvaults --network <network> --mtoken <mToken>
+```
+
+It sends `setRedemptionVaultPaired` / `setDepositVaultPaired` only to the vaults that are not paired with their counterpart yet.
+
+USYC auto-invest deposits are disabled after deployment. To enable them, set `postDeploy.setUsycConfig` and run:
+
+```bash
+yarn hardhat deploy:post:set:usycconfig --network <network> --mtoken <mToken>
+```
 
 #### If new payment token is introduced
 
@@ -210,15 +266,16 @@ Both vault versions (add `--vault-version <v1|v2>`):
 - `yarn deploy:post:set:greenlist`: enable/disable vault greenlist
 - `yarn deploy:post:set:sanctionsList`: set the network sanctions list on vaults
 - `yarn deploy:post:set:aaveconfig` / `yarn deploy:post:set:morphoconfig`: Aave / Morpho vault settings
-- `yarn deploy:post:add:addressbook`: add product addresses to the address book
+- `yarn deploy:post:add:addressbook`: add product addresses to the address book. With `--vault-version v2` vault names get a `v2` marker (`<mToken> Minter Vault v2 (Morpho) - <Network>`)
 - `yarn deploy:post:add:addressbook:network`: add the network level contracts (access control, pause manager, AC timelock manager, AC timelock controller) to the address book as `<Contract> - <Network>`, restricted to the network chain. No `--mtoken` / `--vault-version`; `--keys accessControl,pauseManager,timelockManager,timelockController` limits it to the listed contracts. An existing record of the same address with another name or chains gets an update proposal (name and chain restriction; groups can only be changed in the Fordefi console)
 
 v2 vaults only:
 
-- `yarn deploy:format-log [LOG_PATH] [--print]`: format the log of a deploy / post-deploy run (latest `logs/log-*.log` by default) into a Linear-ready list of txs with the Fordefi tx id and the timelock operation id of timelocked txs, copied to the clipboard
-- `yarn deploy:post:sync`: sync the whole product config of the network with on-chain state in one run. Runs the post-deploy steps below (roles, vault settings, payment tokens, fee waived, greenlist, limits, token config, feed settings, expected answers, pauses) with sending replaced by recording, merges bulk calls from the same wallet (`grantRoleMult`, `revokeRoleMult`, `bulkPauseContract`, `bulkPauseContractFn`), then sends. Nothing is sent if a step fails. `--dry-run true` only prints the txs. Not synced: `setRoundData`, `set:sanctionsList`, LayerZero, Axelar. To sync a new setting, add it to an existing step or add a step to `syncSteps` in `post-deploy/sync_MToken.ts`
+- `yarn deploy:format-log [LOG_PATH] [--print]`: format the log of a deploy / post-deploy run (latest `logs/log-*.log` by default) into a Linear-ready list of txs with the Fordefi tx id and the timelock operation id of timelocked txs, copied to the clipboard. With `LOG_TO_FILE=true` every script run prints its log path at the end (`Logs: logs/log-<...>.log`)
+- `--calldata` (any script task / `runscript`): runs the script as usual, but txs are printed instead of sent: `from` (wallet of the signer action via the custom signer, or the Safe), `to` (with its address book key), `data` and the decoded call. Timelocked calls are printed as `scheduleTimelockOperation`. Contract deployments and txs sent directly by the deployer signer are not supported. Always logs to a file; `yarn deploy:format-calldata [LOG_PATH] [--print]` copies the txs of the run (latest log by default) to the clipboard as a JSON array
+- `yarn deploy:post:sync`: sync the whole product config of the network with on-chain state in one run. Runs the post-deploy steps below (roles, greenlist operator, vault settings, payment tokens, fee waived, greenlist, limits, token config, feed settings, expected answers, pauses) with sending replaced by recording, merges bulk calls from the same wallet (`grantRoleMult`, `revokeRoleMult`, `bulkPauseContract`, `bulkPauseContractFn`), then sends. Nothing is sent if a step fails. `--dry-run true` only prints the txs. Not synced: `setRoundData`, `set:sanctionsList`, LayerZero, Axelar. To sync a new setting, add it to an existing step or add a step to `syncSteps` in `post-deploy/sync_MToken.ts`
 - `yarn deploy:post:set:feed-settings`: sync mToken feeds with `genericConfigs`: custom aggregators (`customAggregator`, `customAggregatorDv/Rv`: min/max answer, max answer deviation, growth APR bounds and `onlyUp`) and data feeds (`healthyDiff`). Only fields set in the config are synced; expected answers are synced by `set:expected-answers`
-- `yarn deploy:post:set:vaultsettings`: sync the settings of deployed vaults with their deploy config (`dv`, `rv`, ...): min amount, instant fee and its bounds, max instant share, variation tolerance, max approve request id, sequential request processing, tokens receiver, sanctions list, DV min first deposit and max amount per request, RV request redeemer. Only fields set in the config are synced
+- `yarn deploy:post:set:vaultsettings`: sync the settings of deployed vaults with their deploy config (`dv`, `rv`, ...): min amount, instant fee and its bounds, max instant share, variation tolerance, max approve request id, sequential request processing, tokens receiver, sanctions list, DV min first deposit and max amount per request, RV request redeemer, USYC vaults anticipated fee rate and mToken vault links (`dvUsyc.redemptionVault`, `rvUsyc.depositVault`). Only fields set in the config are synced
 - `yarn deploy:post:set:waived`: waive vault fee for an address (`addFeeWaived`)
 - `yarn deploy:post:pause:functions`: pause selected vault functions via the pause manager (`pauseFunctions`)
 - `yarn deploy:post:pause:contracts`: pause whole vaults via the pause manager (`pauseContracts`)
@@ -229,6 +286,7 @@ v2 vaults only:
 - `yarn deploy:post:set:preferloanliquidity`: redemption vault loan liquidity preference (`preferLoanLiquidity`)
 - `yarn deploy:post:set:mtokenconfig`: `depositVaultMToken` auto-invest settings (`setMTokenConfig`)
 - `yarn deploy:post:set:ustbconfig`: `depositVaultUstb` auto-invest settings (`setUstbConfig`)
+- `yarn deploy:post:set:usycpairedvaults`: pair `depositVaultUsyc` and `redemptionVaultUsyc` of an mToken with each other
 
 Network level (no `--mtoken`):
 

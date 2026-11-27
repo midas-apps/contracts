@@ -33,8 +33,10 @@ contract DepositVaultWithMToken is DepositVault {
     bool public mTokenDepositsEnabled;
 
     /**
-     * @notice Whether to fall back to raw token transfer on auto-invest failure
-     * @dev if false, the transaction will revert when auto-invest fails
+     * @notice Whether to fall back to raw token transfer when the target
+     * vault deposit reverts
+     * @dev if false, the transaction will revert in that case.
+     * Any other auto-invest failure always reverts
      */
     bool public autoInvestFallbackEnabled;
 
@@ -128,7 +130,7 @@ contract DepositVaultWithMToken is DepositVault {
 
     /**
      * @notice Updates `autoInvestFallbackEnabled` value
-     * @param enabled whether fallback to raw transfer is enabled on auto-invest failure
+     * @param enabled whether fallback to raw transfer is enabled, see {autoInvestFallbackEnabled}
      */
     function setAutoInvestFallbackEnabled(bool enabled)
         external
@@ -180,8 +182,9 @@ contract DepositVaultWithMToken is DepositVault {
 
     /**
      * @dev Transfers tokens from user to this contract and deposits them
-     * into the target mToken DepositVault. On failure, either falls back
-     * to raw transfer or reverts based on `autoInvestFallbackEnabled`.
+     * into the target mToken DepositVault. If that deposit reverts, either
+     * falls back to raw transfer or reverts based on `autoInvestFallbackEnabled`.
+     * Any other failure always reverts.
      * @param tokenIn token address
      * @param amountToken amount of tokens to transfer in base18
      * @param tokensDecimals decimals of tokens
@@ -205,7 +208,7 @@ contract DepositVaultWithMToken is DepositVault {
             tokensDecimals
         );
 
-        IERC20(tokenIn).safeIncreaseAllowance(
+        IERC20(tokenIn).forceApprove(
             address(mTokenDepositVault),
             transferredAmount
         );
@@ -224,7 +227,7 @@ contract DepositVaultWithMToken is DepositVault {
             targetMToken.safeTransfer(tokensReceiver, mTokenReceived);
         } catch (bytes memory err) {
             if (autoInvestFallbackEnabled) {
-                IERC20(tokenIn).safeApprove(address(mTokenDepositVault), 0);
+                IERC20(tokenIn).forceApprove(address(mTokenDepositVault), 0);
                 IERC20(tokenIn).safeTransfer(tokensReceiver, transferredAmount);
             } else {
                 revert AutoInvestFailed(err);

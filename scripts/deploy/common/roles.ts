@@ -1,10 +1,12 @@
 import { PopulatedTransaction, Signer, utils } from 'ethers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
+import { NO_DELAY, NULL_DELAY } from './delays';
 import {
   getContractAt,
   getDeployer,
   sendAndWaitForCustomTxSign,
+  toFunctionSelector,
 } from './utils';
 import {
   defaultDepositVaultPriority,
@@ -16,6 +18,7 @@ import { MTokenName } from '../../../config';
 import {
   getCurrentAddresses,
   getRawCurrentAddresses,
+  TokenFeedAddresses,
   VaultType,
 } from '../../../config/constants/addresses';
 import {
@@ -27,6 +30,7 @@ import { getCommonContractNames } from '../../../helpers/contracts';
 import {
   getAllRoles,
   getLegacyRolesForToken,
+  getRoleHashOrEmpty,
   getRolesForToken,
 } from '../../../helpers/roles';
 import {
@@ -47,12 +51,24 @@ export type GrantAllTokenRolesConfig = {
   tokenManagerAddress?: Address;
   vaultsManagerAddress?: Address;
   oracleManagerAddress?: Address;
-  // exact product roles for wallets outside the standard manager set
+  // exact product roles for wallets (or product vaults) outside the standard
+  // manager set. A delay is a role-level setting, see `getRoleDelaysToSet`
   extraRoles?: {
-    address: Address;
-    roles: (keyof ReturnType<typeof getRolesForToken>)[];
+    address: Address | VaultType;
+    roles:
+      | (keyof ReturnType<typeof getRolesForToken> | string)[]
+      | {
+          role: keyof ReturnType<typeof getRolesForToken> | string;
+          delay: number;
+        }[];
   }[];
   minBalanceExemptAddresses?: (Address | VaultType)[];
+  // function permissions under the target's contract admin role
+  functionPermissions?: {
+    address: Address;
+    contracts: (keyof TokenFeedAddresses | VaultType | 'token')[];
+    functions: { signature: string; delay: number }[];
+  }[];
 };
 
 const acAdminAddress = '0xd4195CF4df289a4748C1A7B6dDBE770e27bA1227';
@@ -93,8 +109,6 @@ export const grantAllProductRoles = async (
   const tokenManagerRoles = [
     allRoles.common.blacklistedOperator,
     allRoles.common.greenlistedOperator,
-    tokenRoles.burner,
-    tokenRoles.minter,
     tokenRoles.tokenManager,
   ];
 
@@ -107,7 +121,6 @@ export const grantAllProductRoles = async (
     ? [tokenRoles.customFeedAdmin]
     : [];
 
-  const defaultManager = provider.address;
   const profile = getDeploymentProfileForToken(token, hre.deploymentConfig);
   const depositVaults = profile
     ? profile.operatorRoles.minters.map((reference) =>
@@ -129,8 +142,12 @@ export const grantAllProductRoles = async (
         roleGrantRedemptionVaultPriority,
       );
 
-  const roleBatch: string[] = [];
+  const roleBatch: (string | { role: string; delay: number })[] = [];
   const addressBatch: string[] = [];
+
+  const parseRole = (r: (typeof roleBatch)[0]) => {
+    return typeof r === 'string' ? { role: r, delay: 0 } : r;
+  };
 
   // Token / vault / oracle managers
   if (managerGrantConfig) {
@@ -141,11 +158,11 @@ export const grantAllProductRoles = async (
       );
     }
 
-    if (managerGrantConfig.vaultsManagerAddress || !profile) {
+    if (managerGrantConfig.vaultsManagerAddress) {
       roleBatch.push(...vaultManagerRoles);
       addressBatch.push(
         ...vaultManagerRoles.map(
-          () => managerGrantConfig.vaultsManagerAddress ?? defaultManager,
+          () => managerGrantConfig.vaultsManagerAddress!,
         ),
       );
     }
@@ -162,34 +179,61 @@ export const grantAllProductRoles = async (
       );
     }
 
-    for (const { address, roles } of managerGrantConfig.extraRoles ?? []) {
-      for (const role of roles) {
-        const roleHash = tokenRoles[role];
-        if (!roleHash) {
-          throw new Error(`Role ${role} is not configured for ${token}`);
-        }
-        roleBatch.push(roleHash);
-        addressBatch.push(address);
-      }
-    }
-
     const deployedAddresses = getDeploymentTokenAddresses(
       tokenAddresses,
       token,
       hre.deploymentConfig,
     );
-    const minBalanceExemptAddresses = (
-      managerGrantConfig.minBalanceExemptAddresses ?? []
-    ).map((reference) => {
+    const resolveAccount = (reference: Address | VaultType, label: string) => {
       if (reference.startsWith('0x')) return reference;
       const address = deployedAddresses[reference as VaultType];
       if (!address) {
         throw new Error(
-          `Min-balance exempt vault ${token}.${reference} is not configured`,
+          `${label} vault ${token}.${reference} is not configured`,
         );
       }
       return address;
-    });
+    };
+
+    for (const { address, roles } of managerGrantConfig.extraRoles ?? []) {
+      const account = resolveAccount(address, 'Extra role');
+      for (const role of roles) {
+        let roleHash;
+        let roleDelay = 0;
+        let rawRole;
+        if (typeof role === 'string') {
+          roleHash =
+            tokenRoles[role as keyof ReturnType<typeof getRolesForToken>];
+          rawRole = role;
+        } else {
+          roleHash =
+            tokenRoles[role.role as keyof ReturnType<typeof getRolesForToken>];
+          roleDelay = role.delay;
+          rawRole = role.role;
+        }
+
+        // if emty then means that role is not found in default roles
+        // and raw role descriptor passed
+        if (!roleHash) {
+          if (!rawRole.includes('_')) {
+            throw new Error('Invalid role description');
+          }
+
+          roleHash = getRoleHashOrEmpty(rawRole);
+          console.log(`Raw role granting: ${rawRole} (${roleHash})`);
+        }
+
+        if (!roleHash) {
+          throw new Error(`Role ${role} is not configured for ${token}`);
+        }
+        roleBatch.push({ role: roleHash, delay: roleDelay });
+        addressBatch.push(account);
+      }
+    }
+
+    const minBalanceExemptAddresses = (
+      managerGrantConfig.minBalanceExemptAddresses ?? []
+    ).map((reference) => resolveAccount(reference, 'Min-balance exempt'));
     roleBatch.push(
       ...minBalanceExemptAddresses.map(() => tokenRoles.minBalanceExempt),
     );
@@ -206,63 +250,315 @@ export const grantAllProductRoles = async (
     addressBatch.push(rv);
   }
 
-  const present = await Promise.all(
-    roleBatch.map((role, i) => accessControl.hasRole(role, addressBatch[i])),
-  );
-  const rolesToGrant = roleBatch.filter((_, i) => !present[i]);
-  const addressesToGrant = addressBatch.filter((_, i) => !present[i]);
+  // the v1 access control (not upgraded yet) has a different bulk signature
+  // and no role delays
+  const isV1 = await isV1AccessControl(accessControl);
 
-  if (rolesToGrant.length === 0) {
+  const entries = mergeDuplicateGrants(
+    roleBatch.map((role, i) => ({
+      ...parseRole(role),
+      account: addressBatch[i],
+    })),
+  );
+  const held = await Promise.all(
+    entries.map(({ role, account }) => accessControl.hasRole(role, account)),
+  );
+  const delaysToSet = await getRoleDelaysToSet(accessControl, entries, isV1);
+
+  // a role delay is sent with a single grant of the role: a missing one if
+  // any, otherwise (v2 only) a re-grant to a holder, which only sets the delay
+  const delayCarriers = new Set<number>();
+  for (const role of delaysToSet.keys()) {
+    const ofRole = entries.flatMap((entry, i) =>
+      entry.role === role ? i : [],
+    );
+    const carrier = ofRole.find((i) => !held[i]) ?? (isV1 ? -1 : ofRole[0]);
+    if (carrier >= 0) delayCarriers.add(carrier);
+  }
+
+  const grants = entries
+    .map((entry, i) => ({
+      ...entry,
+      held: held[i],
+      delay: delayCarriers.has(i) ? delaysToSet.get(entry.role)! : 0,
+    }))
+    .filter(({ held, delay }) => !held || delay !== 0);
+
+  if (grants.length === 0) {
     console.log(`${token}: all product roles already granted — skip`);
+  } else {
+    const alreadyHeld = held.filter(Boolean).length;
+    console.log(
+      alreadyHeld > 0
+        ? `${token}: grant ${grants.length} missing (${alreadyHeld}/${entries.length} already held)`
+        : `${token}: grant ${grants.length} missing`,
+    );
+
+    const roleNames = Object.entries({ ...allRoles.common, ...tokenRoles });
+    const roleName = (role: string) =>
+      roleNames.find(([, hash]) => hash === role)?.[0] ?? role;
+
+    const sendGrant = async (
+      batch: typeof grants,
+      v1Style: boolean,
+      comment: string,
+      batchKey?: string,
+    ) => {
+      if (!batch.length) return;
+
+      const grantTx: PopulatedTransaction = v1Style
+        ? {
+            to: accessControl.address,
+            data: v1AcInterface.encodeFunctionData('grantRoleMult', [
+              batch.map(({ role }) => role),
+              batch.map(({ account }) => account),
+            ]),
+          }
+        : await accessControl.populateTransaction.grantRoleMult(
+            batch.map(({ role, account, delay }) => ({ role, account, delay })),
+          );
+
+      await sendAndWaitForCustomTxSign(hre, grantTx, {
+        action: 'update-ac',
+        subAction: 'grant-token-roles',
+        comment,
+        batchKey,
+        // v2 call on a v1 access control: only succeeds after the upgrade
+        skipPrediction: isV1 && !v1Style,
+        changes: batch.flatMap(({ role, account, held, delay }) => [
+          ...(held
+            ? []
+            : [
+                {
+                  field: `ac.hasRole[${roleName(role)}][${account}]`,
+                  current: false,
+                  target: true,
+                },
+              ]),
+          ...(delay
+            ? [
+                {
+                  field: `ac.roleTimelockDelay[${roleName(role)}]`,
+                  current: 'unset',
+                  target: delay === NO_DELAY ? 'NO_DELAY' : delay,
+                },
+              ]
+            : []),
+        ]),
+      });
+    };
+
+    if (isV1) {
+      console.log(
+        `${token}: access control is v1, roles without delay use the v1 grantRoleMult, delayed roles a v2 one (to execute after the upgrade)`,
+      );
+      await sendGrant(
+        grants.filter(({ delay }) => delay === 0),
+        true,
+        `grant all ${token} roles`,
+      );
+      await sendGrant(
+        grants.filter(({ delay }) => delay !== 0),
+        false,
+        `grant ${token} delayed roles (requires AC v2)`,
+      );
+    } else {
+      // `grantRoleMult` requires the same admin role for all the roles of a call
+      const byAdmin = new Map<string, typeof grants>();
+      for (const grant of grants) {
+        const admin = await accessControl.getRoleAdmin(grant.role);
+        byAdmin.set(admin, [...(byAdmin.get(admin) ?? []), grant]);
+      }
+
+      for (const [admin, batch] of byAdmin) {
+        await sendGrant(
+          batch,
+          false,
+          byAdmin.size > 1
+            ? `grant ${token} roles administered by ${roleName(admin)}`
+            : `grant all ${token} roles`,
+          // grants under different admins must not be merged back by the sync
+          `roleAdmin:${admin}`,
+        );
+      }
+    }
+  }
+
+  await setProductFunctionPermissions(
+    hre,
+    accessControl,
+    token,
+    managerGrantConfig?.functionPermissions ?? [],
+    isV1,
+  );
+};
+
+type RoleGrant = { role: string; account: string; delay: number };
+
+/**
+ * Merges the grants of the same role to the same account, keeping the
+ * configured delay
+ */
+const mergeDuplicateGrants = (grants: RoleGrant[]) => {
+  const merged = new Map<string, RoleGrant>();
+
+  for (const grant of grants) {
+    const key = `${grant.role}:${grant.account.toLowerCase()}`;
+    const existing = merged.get(key);
+
+    if (!existing) {
+      merged.set(key, { ...grant });
+      continue;
+    }
+
+    if (existing.delay && grant.delay && existing.delay !== grant.delay) {
+      throw new Error(
+        `Conflicting delays for role ${grant.role} of ${grant.account}`,
+      );
+    }
+
+    existing.delay = existing.delay || grant.delay;
+  }
+
+  return [...merged.values()];
+};
+
+/**
+ * Role delays to set with the grants. A delay belongs to the role (not to
+ * the grant) and can be set only once (`DelayIsAlreadySet`), so the grants
+ * of a role must agree on it, and the roles that already have a delay
+ * on-chain are skipped. The v1 access control has no delays yet: all the
+ * configured ones are returned
+ */
+const getRoleDelaysToSet = async (
+  accessControl: MidasAccessControl,
+  grants: RoleGrant[],
+  isV1AC: boolean,
+) => {
+  const delays = new Map<string, number>();
+
+  for (const { role, delay } of grants) {
+    if (delay === NULL_DELAY) continue;
+
+    const configured = delays.get(role);
+    if (configured !== undefined && configured !== delay) {
+      throw new Error(`Conflicting delays for role ${role}`);
+    }
+    delays.set(role, delay);
+  }
+
+  if (isV1AC) return delays;
+
+  for (const [role, delay] of [...delays]) {
+    const [current, isDefault] = await accessControl.getRoleTimelockDelay(
+      role,
+      NULL_DELAY,
+    );
+
+    if (isDefault) continue;
+
+    delays.delete(role);
+
+    const expected = delay === NO_DELAY ? 0 : delay;
+    if (current !== expected) {
+      console.warn(
+        `WARN: role ${role} delay is already ${current}s on-chain, configured ${expected}s is not applied`,
+      );
+    }
+  }
+
+  return delays;
+};
+
+const setProductFunctionPermissions = async (
+  hre: HardhatRuntimeEnvironment,
+  accessControl: MidasAccessControl,
+  token: MTokenName,
+  permissions: NonNullable<GrantAllTokenRolesConfig['functionPermissions']>,
+  isV1AC: boolean,
+) => {
+  if (!permissions.length) return;
+
+  const deployedAddresses = getDeploymentTokenAddresses(
+    getCurrentAddresses(hre)![token]!,
+    token,
+    hre.deploymentConfig,
+  );
+
+  const paramsByTarget = new Map<
+    string,
+    {
+      functionSelector: string;
+      account: string;
+      delay: number;
+      enabled: boolean;
+    }[]
+  >();
+
+  for (const { address, contracts, functions } of permissions) {
+    for (const reference of contracts) {
+      const target = deployedAddresses[reference];
+      if (!target) {
+        throw new Error(`Permission target ${token}.${reference} is not set`);
+      }
+
+      // v1 access control (and v1 targets) have no function permissions yet,
+      // the master role is resolved on-chain by `setPermissionRoleMult`
+      const masterRole = isV1AC
+        ? undefined
+        : await (
+            await getContractAt(hre, 'IMidasAccessControlManaged', target)
+          ).contractAdminRole();
+
+      for (const { signature, delay } of functions) {
+        const functionSelector = toFunctionSelector(signature);
+
+        if (
+          masterRole &&
+          (await accessControl[
+            'hasFunctionPermission(bytes32,address,bytes4,address)'
+          ](masterRole, target, functionSelector, address))
+        ) {
+          continue;
+        }
+
+        console.log(
+          `${token}.${reference}: permit ${signature} to ${address} (delay ${delay})`,
+        );
+        paramsByTarget.set(target, [
+          ...(paramsByTarget.get(target) ?? []),
+          { functionSelector, account: address, delay, enabled: true },
+        ]);
+      }
+    }
+  }
+
+  if (!paramsByTarget.size) {
+    console.log(`${token}: all function permissions already set — skip`);
     return;
   }
 
-  const alreadyHeld = roleBatch.length - rolesToGrant.length;
-  console.log(
-    alreadyHeld > 0
-      ? `${token}: grant ${rolesToGrant.length} missing (${alreadyHeld}/${roleBatch.length} already held)`
-      : `${token}: grant ${rolesToGrant.length} missing`,
-  );
-
-  // the v1 access control (not upgraded yet) has a different bulk signature
-  const isV1 = await isV1AccessControl(accessControl);
-
-  if (isV1) {
-    console.log(
-      `${token}: access control is v1, using the v1 grantRoleMult signature`,
+  for (const [target, params] of paramsByTarget) {
+    await sendAndWaitForCustomTxSign(
+      hre,
+      await accessControl.populateTransaction[
+        'setPermissionRoleMult(address,(bytes4,address,uint32,bool)[])'
+      ](target, params),
+      {
+        action: 'update-ac',
+        subAction: 'set-function-permissions',
+        comment: `set ${token} function permissions on ${target}${
+          isV1AC ? ' (requires AC v2)' : ''
+        }`,
+        skipPrediction: isV1AC,
+        changes: params.map(({ functionSelector, account }) => ({
+          field: `ac.hasFunctionPermission[${target}][${functionSelector}][${account}]`,
+          current: false,
+          target: true,
+        })),
+      },
     );
   }
-
-  const grantTx: PopulatedTransaction = isV1
-    ? {
-        to: accessControl.address,
-        data: v1AcInterface.encodeFunctionData('grantRoleMult', [
-          rolesToGrant,
-          addressesToGrant,
-        ]),
-      }
-    : await accessControl.populateTransaction.grantRoleMult(
-        rolesToGrant.map((role, index) => ({
-          role,
-          account: addressesToGrant[index],
-          delay: 0, // TODO: add default delay?
-        })),
-      );
-
-  const roleNames = Object.entries({ ...allRoles.common, ...tokenRoles });
-  const roleName = (role: string) =>
-    roleNames.find(([, hash]) => hash === role)?.[0] ?? role;
-
-  await sendAndWaitForCustomTxSign(hre, grantTx, {
-    action: 'update-ac',
-    subAction: 'grant-token-roles',
-    comment: `grant all ${token} roles`,
-    changes: rolesToGrant.map((role, i) => ({
-      field: `ac.hasRole[${roleName(role)}][${addressesToGrant[i]}]`,
-      current: false,
-      target: true,
-    })),
-  });
 };
 
 export const revokeDefaultRolesFromDeployer = async (

@@ -452,7 +452,7 @@ const func: DeployFunction = async (
   }
   // Validate signers for every affected chain before the first proposal.
   for (const reader of new Set(plan.map((item) => item.reader))) {
-    if ((await reader.hre.getCustomSigner()).type !== 'customSigner')
+    if ((await reader.hre.getCustomSigner()).type === 'hardhatSigner')
       throw new Error(
         'Submission requires the configured Fordefi custom signer',
       );

@@ -12,6 +12,7 @@ contract AaveV3PoolMock {
     mapping(address => address) public reserveATokens;
     uint256 public withdrawReturnBps = 10_000;
     bool public shouldRevertSupply;
+    uint256 public supplyPullBps = 10_000;
 
     function setReserveAToken(address asset, address aToken) external {
         reserveATokens[asset] = aToken;
@@ -44,6 +45,10 @@ contract AaveV3PoolMock {
         shouldRevertSupply = _shouldRevert;
     }
 
+    function setSupplyPullBps(uint256 bps) external {
+        supplyPullBps = bps;
+    }
+
     function supply(
         address asset,
         uint256 amount,
@@ -54,7 +59,11 @@ contract AaveV3PoolMock {
         address aToken = reserveATokens[asset];
         require(aToken != address(0), "AaveV3PoolMock: NoReserve");
 
-        IERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
+        IERC20(asset).safeTransferFrom(
+            msg.sender,
+            address(this),
+            (amount * supplyPullBps) / 10_000
+        );
         ERC20Mock(aToken).mint(onBehalfOf, amount);
     }
 

@@ -3,8 +3,10 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import pauseContracts from './pause_Contracts';
 import pauseFunctions from './pause_Functions';
 import setGreenlist from './set_Greenlist';
+import setGreenlistOperator from './set_GreenlistOperator';
 
 import { MTokenName } from '../../../config';
+import { getRolesForToken } from '../../../helpers/roles';
 import {
   addPaymentTokens,
   setAaveConfig,
@@ -42,7 +44,7 @@ type ProductConfig = {
 type MTokenSyncStep = {
   name: string;
   /** the step is skipped when it returns false. Default: always runs */
-  isConfigured?: (config: ProductConfig) => boolean;
+  isConfigured?: (config: ProductConfig, mToken: MTokenName) => boolean;
   /** an existing post-deploy step: reads on-chain state, sends the diff */
   run: (hre: HardhatRuntimeEnvironment, mToken: MTokenName) => Promise<unknown>;
 };
@@ -65,6 +67,12 @@ const postDeployStep = (
  */
 const syncSteps: MTokenSyncStep[] = [
   postDeployStep('grantRoles', grantAllProductRoles),
+  // after grantRoles: its grants are planned against the current role admins
+  {
+    name: 'greenlistOperator',
+    isConfigured: (_, mToken) => !!getRolesForToken(mToken).greenlistedOperator,
+    run: setGreenlistOperator,
+  },
   { name: 'vaultSettings', run: setVaultSettings },
   postDeployStep('addPaymentTokens', addPaymentTokens),
   postDeployStep('addFeeWaived', setFeeWaivedAccounts),
@@ -111,7 +119,7 @@ const func: DeployFunction = async (
     mToken,
     syncSteps.map((step) => ({
       name: step.name,
-      isConfigured: step.isConfigured?.(productConfig) ?? true,
+      isConfigured: step.isConfigured?.(productConfig, mToken) ?? true,
       run: () => step.run(hre, mToken),
     })),
     dryRun,

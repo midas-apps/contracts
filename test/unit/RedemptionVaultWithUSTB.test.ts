@@ -392,6 +392,204 @@ redemptionVaultSuits(
           });
         });
 
+        describe('vault fee is not obtained from the liquidity sources', () => {
+          // 1000 mTBILL at 1$ with 1% instant fee: 990 USDC payout, 10 USDC fee
+          const redeemWithLiquidity = async ({
+            usdc = 0,
+            ustbWorthUsdc = 0,
+            lpMToken = 0,
+            preferLoanLiquidity = false,
+          }: {
+            usdc?: number;
+            /** USTB balance expressed as the USDC it redeems to */
+            ustbWorthUsdc?: number;
+            lpMToken?: number;
+            preferLoanLiquidity?: boolean;
+          }) => {
+            const fixture = await loadFixture(defaultDeploy);
+            const {
+              owner,
+              mockedAggregator,
+              mockedAggregatorMToken,
+              redemptionVaultWithUSTB,
+              stableCoins,
+              mTBILL,
+              dataFeed,
+              mTokenToUsdDataFeed,
+              ustbToken,
+              ustbRedemption,
+              loanLp,
+              mTokenLoan,
+              redemptionVaultLoanSwapper,
+            } = fixture;
+
+            const ustbForUsdc = async (amount: number) =>
+              amount === 0
+                ? constants.Zero
+                : (
+                    await ustbRedemption.calculateUstbIn(
+                      parseUnits(amount.toString(), 8),
+                    )
+                  ).ustbInAmount;
+
+            const ustbBefore = await ustbForUsdc(ustbWorthUsdc);
+
+            await mintToken(stableCoins.usdc, redemptionVaultWithUSTB, usdc);
+            await ustbToken.mint(redemptionVaultWithUSTB.address, ustbBefore);
+            await mintToken(mTokenLoan, loanLp, lpMToken);
+            await approveBase18(
+              loanLp,
+              mTokenLoan,
+              redemptionVaultWithUSTB,
+              lpMToken,
+            );
+            await mintToken(stableCoins.usdc, redemptionVaultLoanSwapper, 1000);
+            await addPaymentTokenTest(
+              { vault: redemptionVaultLoanSwapper, owner },
+              stableCoins.usdc,
+              dataFeed.address,
+              0,
+              true,
+            );
+
+            await mintToken(mTBILL, owner, 1000);
+            await approveBase18(owner, mTBILL, redemptionVaultWithUSTB, 1000);
+            await addPaymentTokenTest(
+              { vault: redemptionVaultWithUSTB, owner },
+              stableCoins.usdc,
+              dataFeed.address,
+              0,
+              true,
+            );
+            await setRoundData({ mockedAggregator }, 1);
+            await setRoundData({ mockedAggregator: mockedAggregatorMToken }, 1);
+            await setPreferLoanLiquidityTest(
+              { redemptionVault: redemptionVaultWithUSTB, owner },
+              preferLoanLiquidity,
+            );
+
+            const loanRequestId =
+              await redemptionVaultWithUSTB.currentLoanRequestId();
+
+            await redeemInstantTest(
+              {
+                redemptionVault: redemptionVaultWithUSTB,
+                owner,
+                mTBILL,
+                mTokenToUsdDataFeed,
+                additionalLiquidity: async () => {
+                  const ustbBalance = await ustbToken.balanceOf(
+                    redemptionVaultWithUSTB.address,
+                  );
+                  // mock reverts on zero input
+                  return ustbBalance.isZero()
+                    ? constants.Zero
+                    : (await ustbRedemption.calculateUsdcOut(ustbBalance))
+                        .usdcOutAmountAfterFee;
+                },
+              },
+              stableCoins.usdc,
+              1000,
+            );
+
+            expect(
+              await stableCoins.usdc.balanceOf(redemptionVaultWithUSTB.address),
+            ).eq(0);
+
+            return {
+              ...fixture,
+              loanRequestId,
+              ustbForUsdc,
+              ustbUsed: ustbBefore.sub(
+                await ustbToken.balanceOf(redemptionVaultWithUSTB.address),
+              ),
+              loanRequest: await redemptionVaultWithUSTB.loanRequests(
+                loanRequestId,
+              ),
+            };
+          };
+
+          it('preferLoanLiquidity=false: USTB covers only the payout', async () => {
+            const {
+              redemptionVaultWithUSTB,
+              loanRequestId,
+              ustbUsed,
+              ustbForUsdc,
+            } = await redeemWithLiquidity({
+              ustbWorthUsdc: 2000,
+              lpMToken: 1000,
+            });
+
+            expect(ustbUsed).eq(await ustbForUsdc(990));
+            expect(await redemptionVaultWithUSTB.currentLoanRequestId()).eq(
+              loanRequestId,
+            );
+          });
+
+          it('preferLoanLiquidity=false: vault has the payout but not the payout + fee, USTB and loan LP are untouched', async () => {
+            const {
+              redemptionVaultWithUSTB,
+              loanRequestId,
+              ustbUsed,
+              mTokenLoan,
+              loanLp,
+            } = await redeemWithLiquidity({
+              usdc: 990,
+              ustbWorthUsdc: 2000,
+              lpMToken: 1000,
+            });
+
+            expect(ustbUsed).eq(0);
+            expect(await redemptionVaultWithUSTB.currentLoanRequestId()).eq(
+              loanRequestId,
+            );
+            expect(await mTokenLoan.balanceOf(loanLp.address)).eq(
+              parseUnits('1000'),
+            );
+          });
+
+          it('preferLoanLiquidity=false: USTB is drained and loan LP covers only the missing payout', async () => {
+            const { ustbUsed, loanRequest, ustbForUsdc } =
+              await redeemWithLiquidity({
+                usdc: 100,
+                ustbWorthUsdc: 700,
+                lpMToken: 1000,
+              });
+
+            // 990 payout - 100 USDC - 700 from USTB = 190 shortfall,
+            // LP fee share is 10 * 190 / 990 truncated to 8 decimals
+            expect(ustbUsed).eq(await ustbForUsdc(700));
+            expect(loanRequest.amountTokenOut).eq(parseUnits('190'));
+            expect(loanRequest.amountFee).eq(parseUnits('1.91919191'));
+          });
+
+          it('preferLoanLiquidity=true: loan LP covers the payout and USTB is untouched', async () => {
+            const { ustbUsed, loanRequest } = await redeemWithLiquidity({
+              ustbWorthUsdc: 2000,
+              lpMToken: 1000,
+              preferLoanLiquidity: true,
+            });
+
+            expect(ustbUsed).eq(0);
+            expect(loanRequest.amountTokenOut).eq(parseUnits('990'));
+            expect(loanRequest.amountFee).eq(parseUnits('10'));
+          });
+
+          it('preferLoanLiquidity=true: loan LP is insufficient and USTB covers only the rest of the payout', async () => {
+            const { ustbUsed, loanRequest, ustbForUsdc } =
+              await redeemWithLiquidity({
+                ustbWorthUsdc: 2000,
+                lpMToken: 500,
+                preferLoanLiquidity: true,
+              });
+
+            // LP gross 500 incl. 5 fee share: 495 cash, USTB covers 990 - 495
+            expect(loanRequest.amountTokenOut).eq(parseUnits('495'));
+            expect(loanRequest.amountFee).eq(parseUnits('5'));
+            expect(ustbUsed).eq(await ustbForUsdc(495));
+          });
+        });
+
         it('should fail: user try to instant redeem more than contract can redeem and it hits loan lp flow', async () => {
           const {
             owner,

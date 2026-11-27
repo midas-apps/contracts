@@ -8,6 +8,7 @@ import {
   getNetworkConfig,
   sendAndWaitForCustomTxSign,
 } from './utils';
+import { findUsycVault } from './vault-resolver';
 
 import { MTokenName, PaymentTokenName } from '../../../config';
 import {
@@ -19,9 +20,11 @@ import { isV2VaultType } from '../../../config/constants/vaults';
 import {
   DepositVaultWithAave,
   DepositVaultWithMorpho,
+  DepositVaultWithUSYC,
   ManageableVault,
   RedemptionVaultWithAave,
   RedemptionVaultWithMorpho,
+  RedemptionVaultWithUSYC,
 } from '../../../typechain-types';
 import { getDeploymentTokenAddresses } from '../configs/deployment-profiles';
 
@@ -242,6 +245,17 @@ const foreachFeeWaiveAddress = async (
   for (const vault of networkConfig) {
     assertVaultTypeSupported(hre, vault.fromVault.type);
 
+    // a vault of another mToken may be not deployed yet
+    if (
+      vault.fromVault.mToken !== token &&
+      !getVaultAddress(hre, vault.fromVault.mToken, vault.fromVault.type)
+    ) {
+      console.warn(
+        `WARN: ${vault.fromVault.mToken} ${vault.fromVault.type} is not deployed, its fee waivers are skipped`,
+      );
+      continue;
+    }
+
     const vaultContract = await getVaultContract(
       hre,
       provider,
@@ -313,9 +327,8 @@ const foreachVaultPaymentToken = async (
   }
 };
 
-const getVaultContract = async (
+const getVaultAddress = (
   hre: HardhatRuntimeEnvironment,
-  provider: Provider | Signer,
   mToken: MTokenName,
   vaultType: VaultType,
 ) => {
@@ -328,7 +341,16 @@ const getVaultContract = async (
       )
     : undefined;
 
-  const vaultAddress = tokenAddresses?.[vaultType];
+  return tokenAddresses?.[vaultType];
+};
+
+const getVaultContract = async (
+  hre: HardhatRuntimeEnvironment,
+  provider: Provider | Signer,
+  mToken: MTokenName,
+  vaultType: VaultType,
+) => {
+  const vaultAddress = getVaultAddress(hre, mToken, vaultType);
 
   if (!vaultAddress) {
     throw new Error('Vault address is not found');
@@ -657,5 +679,169 @@ export const setMorphoConfig = async (
         `autoInvestFallbackEnabled already correct for ${mToken} depositVaultMorpho`,
       );
     }
+  }
+};
+
+export type SetUsycConfigConfig = {
+  /**
+   * Applies to depositVaultUsyc.
+   * @default false
+   */
+  depositsEnabled?: boolean;
+  /**
+   * Applies to depositVaultUsyc.
+   * @default false
+   */
+  autoInvestFallbackEnabled?: boolean;
+};
+
+export const setUsycConfig = async (
+  hre: HardhatRuntimeEnvironment,
+  mToken: MTokenName,
+) => {
+  const { setUsycConfig: networkConfig } = getNetworkConfig(
+    hre,
+    mToken,
+    'postDeploy',
+  );
+
+  if (!networkConfig) {
+    throw new Error('Network config is not found');
+  }
+
+  const addresses = getCurrentAddresses(hre);
+  const vaultAddress = addresses?.[mToken]?.depositVaultUsyc;
+
+  if (!vaultAddress) {
+    throw new Error(`depositVaultUsyc address is not found for ${mToken}`);
+  }
+
+  const dv = (await getContractAt(
+    hre,
+    'DepositVaultWithUSYC',
+    vaultAddress,
+  )) as DepositVaultWithUSYC;
+
+  const targetDepositsEnabled = networkConfig.depositsEnabled ?? false;
+  const depositsEnabled = await dv.usycDepositsEnabled();
+  if (depositsEnabled !== targetDepositsEnabled) {
+    const tx = await dv.populateTransaction.setUsycDepositsEnabled(
+      targetDepositsEnabled,
+    );
+    await sendAndWaitForCustomTxSign(hre, tx, {
+      action: 'update-vault',
+      subAction: 'set-usyc-deposits-enabled',
+      comment: `Set usycDepositsEnabled=${targetDepositsEnabled} for ${mToken} depositVaultUsyc`,
+      mToken,
+    });
+    console.log(
+      `Set usycDepositsEnabled=${targetDepositsEnabled} for ${mToken} depositVaultUsyc`,
+    );
+  } else {
+    console.log(
+      `usycDepositsEnabled already correct for ${mToken} depositVaultUsyc`,
+    );
+  }
+
+  const targetFallbackEnabled =
+    networkConfig.autoInvestFallbackEnabled ?? false;
+  const fallbackEnabled = await dv.autoInvestFallbackEnabled();
+  if (fallbackEnabled !== targetFallbackEnabled) {
+    const tx = await dv.populateTransaction.setAutoInvestFallbackEnabled(
+      targetFallbackEnabled,
+    );
+    await sendAndWaitForCustomTxSign(hre, tx, {
+      action: 'update-vault',
+      subAction: 'set-auto-invest-fallback-enabled',
+      comment: `Set autoInvestFallbackEnabled=${targetFallbackEnabled} for ${mToken} depositVaultUsyc`,
+      mToken,
+    });
+    console.log(
+      `Set autoInvestFallbackEnabled=${targetFallbackEnabled} for ${mToken} depositVaultUsyc`,
+    );
+  } else {
+    console.log(
+      `autoInvestFallbackEnabled already correct for ${mToken} depositVaultUsyc`,
+    );
+  }
+};
+
+/**
+ * Pairs depositVaultUsyc and redemptionVaultUsyc of `mToken` with each
+ * other, so that each vault validates the Teller fee rate of the other one.
+ * A vault is only updated when it is not paired with its counterpart yet,
+ * e.g. the vault that was deployed first and has no paired vault.
+ * Fails when one of the vaults is not deployed or when more than one vault
+ * of a type is found for `mToken`
+ */
+export const setUsycPairedVaults = async (
+  hre: HardhatRuntimeEnvironment,
+  mToken: MTokenName,
+) => {
+  const tokenAddresses = getCurrentAddresses(hre)?.[mToken];
+
+  const dvAddress = findUsycVault(tokenAddresses, mToken, 'depositVaultUsyc');
+  const rvAddress = findUsycVault(
+    tokenAddresses,
+    mToken,
+    'redemptionVaultUsyc',
+  );
+
+  if (!dvAddress || !rvAddress) {
+    throw new Error(
+      `Both USYC vaults have to be deployed for ${mToken} to pair them (depositVaultUsyc: ${
+        dvAddress ?? 'not found'
+      }, redemptionVaultUsyc: ${rvAddress ?? 'not found'})`,
+    );
+  }
+
+  const dv = (await getContractAt(
+    hre,
+    'DepositVaultWithUSYC',
+    dvAddress,
+  )) as DepositVaultWithUSYC;
+  const rv = (await getContractAt(
+    hre,
+    'RedemptionVaultWithUSYC',
+    rvAddress,
+  )) as RedemptionVaultWithUSYC;
+
+  const pairings = [
+    {
+      vault: 'depositVaultUsyc',
+      field: 'redemptionVaultPaired',
+      current: await dv.redemptionVaultPaired(),
+      target: rvAddress,
+      populate: () =>
+        dv.populateTransaction.setRedemptionVaultPaired(rvAddress),
+    },
+    {
+      vault: 'redemptionVaultUsyc',
+      field: 'depositVaultPaired',
+      current: await rv.depositVaultPaired(),
+      target: dvAddress,
+      populate: () => rv.populateTransaction.setDepositVaultPaired(dvAddress),
+    },
+  ];
+
+  for (const { vault, field, current, target, populate } of pairings) {
+    if (current.toLowerCase() === target.toLowerCase()) {
+      console.log(`${field} already correct for ${mToken} ${vault}`);
+      continue;
+    }
+
+    if (current !== constants.AddressZero) {
+      console.log(
+        `${mToken} ${vault} is paired with ${current}, replacing it with ${target}`,
+      );
+    }
+
+    await sendAndWaitForCustomTxSign(hre, await populate(), {
+      action: 'update-vault',
+      subAction: 'set-usyc-paired-vault',
+      comment: `Set ${field}=${target} for ${mToken} ${vault}`,
+      mToken,
+    });
+    console.log(`Set ${field}=${target} for ${mToken} ${vault}`);
   }
 };

@@ -58,6 +58,7 @@ export const getHreByNetworkName = async (network: Network) => {
     extender(newHre, {
       contextId: environment.contextId,
     });
+    newHre.calldata = environment.calldata;
 
     return newHre;
   } catch (error: unknown) {

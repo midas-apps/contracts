@@ -128,6 +128,8 @@ contract MidasAccessControl is
         isUserFacingRole[MidasAuthLibrary.DEFAULT_GREENLISTED_ROLE] = true;
 
         for (uint256 i = 0; i < _userFacingRoles.length; ++i) {
+            _validateUserFacingRole(_userFacingRoles[i]);
+
             isUserFacingRole[_userFacingRoles[i]] = true;
         }
     }
@@ -196,6 +198,8 @@ contract MidasAccessControl is
 
         for (uint256 i = 0; i < params.length; ++i) {
             SetUserFacingRoleParams calldata param = params[i];
+
+            _validateUserFacingRole(param.role);
 
             // if value already set, skip and do not emit event
             if (isUserFacingRole[param.role] == param.enabled) {
@@ -424,6 +428,8 @@ contract MidasAccessControl is
         onlyRoleWithTimelock(getRoleAdmin(role))
     {
         require(role != DEFAULT_ADMIN_ROLE, UnexpectedRole(role));
+        require(newAdminRole != role, UnexpectedRole(role));
+        MidasAuthLibrary.requireNotUserFacingRole(this, newAdminRole);
         _setRoleAdmin(role, newAdminRole);
     }
 
@@ -787,5 +793,13 @@ contract MidasAccessControl is
         returns (bytes32)
     {
         return IMidasAccessControlManaged(targetContract).contractAdminRole();
+    }
+
+    /**
+     * @notice validates that the role can be marked as user facing
+     * @param role role to validate
+     */
+    function _validateUserFacingRole(bytes32 role) private pure {
+        require(role != DEFAULT_ADMIN_ROLE, UnexpectedRole(DEFAULT_ADMIN_ROLE));
     }
 }

@@ -565,6 +565,65 @@ depositVaultSuits(
             },
           );
         });
+
+        it('should fail: pool does not consume the whole allowance, fallback enabled', async () => {
+          const {
+            owner,
+            depositVaultWithAave,
+            stableCoins,
+            mTBILL,
+            mTokenToUsdDataFeed,
+            dataFeed,
+            aavePoolMock,
+            regularAccounts,
+          } = await loadFixture(defaultDeploy);
+
+          await setAaveDepositsEnabledTest(
+            { depositVaultWithAave, owner },
+            true,
+          );
+          await setAutoInvestFallbackEnabledAaveTest(
+            { depositVaultWithAave, owner },
+            true,
+          );
+          await setMinAmountTest({ vault: depositVaultWithAave, owner }, 10);
+
+          await mintToken(stableCoins.usdc, regularAccounts[0], 100);
+          await approveBase18(
+            regularAccounts[0],
+            stableCoins.usdc,
+            depositVaultWithAave,
+            100,
+          );
+          await addPaymentTokenTest(
+            { vault: depositVaultWithAave, owner },
+            stableCoins.usdc,
+            dataFeed.address,
+            0,
+            true,
+          );
+
+          await aavePoolMock.setSupplyPullBps(9_000);
+
+          await depositInstantWithAaveTest(
+            {
+              depositVaultWithAave,
+              owner,
+              mTBILL,
+              mTokenToUsdDataFeed,
+              aavePoolMock,
+              expectedAaveDeposited: false,
+            },
+            stableCoins.usdc,
+            100,
+            {
+              from: regularAccounts[0],
+              revertCustomError: {
+                customErrorName: 'AllowanceNotConsumed',
+              },
+            },
+          );
+        });
       });
 
       describe('depositRequest()', () => {

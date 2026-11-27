@@ -1,0 +1,77 @@
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.34;
+
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
+import "../DepositVaultWithUSYC.sol";
+import "./DepositVaultTest.sol";
+
+contract DepositVaultWithUSYCTest is
+    DepositVaultTestBase,
+    DepositVaultWithUSYC
+{
+    constructor()
+        DepositVaultWithUSYC(
+            keccak256("DEPOSIT_VAULT_ADMIN_ROLE"),
+            MidasAuthLibrary.DEFAULT_GREENLISTED_ROLE
+        )
+    {}
+
+    function _disableInitializers()
+        internal
+        override(Initializable, DepositVaultTestBase)
+    {
+        DepositVaultTestBase._disableInitializers();
+    }
+
+    function _instantTransferTokensToTokensReceiver(
+        address tokenIn,
+        uint256 amountToken,
+        uint256 tokensDecimals
+    ) internal virtual override(DepositVaultWithUSYC, DepositVault) {
+        DepositVaultWithUSYC._instantTransferTokensToTokensReceiver(
+            tokenIn,
+            amountToken,
+            tokensDecimals
+        );
+    }
+
+    function _requestTransferTokensToTokensReceiver(
+        address tokenIn,
+        uint256 amountToken,
+        uint256 tokensDecimals
+    ) internal override(DepositVaultWithUSYC, DepositVault) {
+        DepositVaultWithUSYC._requestTransferTokensToTokensReceiver(
+            tokenIn,
+            amountToken,
+            tokensDecimals
+        );
+    }
+
+    function _validateMTokenAmount(address user, uint256 amountMToken)
+        internal
+        view
+        override(DepositVaultTestBase, DepositVault)
+        returns (bool)
+    {
+        return DepositVaultTestBase._validateMTokenAmount(user, amountMToken);
+    }
+
+    function _getTokenRate(address dataFeed, bool stable)
+        internal
+        view
+        override(DepositVaultTestBase, ManageableVault)
+        returns (uint256)
+    {
+        return DepositVaultTestBase._getTokenRate(dataFeed, stable);
+    }
+
+    function contractAdminRole()
+        public
+        view
+        override(DepositVaultTestBase, ManageableVault)
+        returns (bytes32)
+    {
+        return DepositVaultTestBase.contractAdminRole();
+    }
+}

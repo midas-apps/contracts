@@ -24,9 +24,20 @@ export {
   isVaultVersion,
   selectVaultVersion,
   toV2VaultKey,
+  allVaultTypes,
   v1VaultTypes,
   v2VaultTypes,
 } from './vaults';
+
+/**
+ * External libraries that are deployed separately and linked into contracts
+ */
+export const libraryNames = ['VaultsWithUSYCLibrary'] as const;
+
+export type LibraryName = (typeof libraryNames)[number];
+
+export const isLibraryName = (name: string): name is LibraryName =>
+  libraryNames.includes(name as LibraryName);
 
 export type LayerZeroTokenAddresses = {
   oft?: string;
@@ -101,6 +112,7 @@ export type MidasAddresses = Partial<Record<MTokenName, TokenAddresses>> & {
   timelockController?: string;
   pauseManager?: string;
   paymentTokens?: Partial<Record<PaymentTokenName, DataFeedAddresses>>;
+  libraries?: Partial<Record<LibraryName, string>>;
 };
 
 /**
@@ -118,6 +130,9 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
   MidasAddresses | undefined
 > = {
   arc: {
+    libraries: {
+      VaultsWithUSYCLibrary: '0xd118c610F9fDa18b45840Dc621fA7882B353E7E3',
+    },
     accessControl: '0xD0e01E127cf111AAB7CA56204D5A24532F86461c',
     timelock: '0x450F76E9eC5bB13C4945092c2055cB39789E1A69',
     pauseManager: '0xEcB4DEaAd31e5091B79CCE12a00C578f401d7761',
@@ -151,6 +166,8 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeedRv: '0x440630B3Fd31AedE0aa08F9A2B4C73022ed43046',
       depositVault: '0x898555B66FE541023A45718500FD6A9F412a4168',
       redemptionVaultSwapper: '0x666D13b7B4f428439a1ca7d403B84C0397AD2d52',
+      depositVaultV2: '0xABEA6b56959de59Da516601366D658837BB0d065',
+      redemptionVaultV2: '0x3c94428284F302027aa60640d80DB6bAe543DcdC',
     },
     radYC: {
       token: '0x7F36b7e65F2BAc2C3B13EABAe708d0fe373a4312',
@@ -160,6 +177,8 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeedRv: '0xD21f13D209163C584083a68672333BD7B43F86F0',
       depositVault: '0x320a9ee478096b68C74337D6fab7e9E6021e94C8',
       redemptionVaultSwapper: '0x7A483d116c7b2178101a1C9abc71CA39221194Ba',
+      depositVaultUsycV2: '0x9a44Db44933F4c4DB547559829c44289c4e67097',
+      redemptionVaultUsycV2: '0xc3c16e148A33b47eeF995198A976e69bA03fbD8E',
     },
   },
   main: {
@@ -2000,6 +2019,9 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
     },
   },
   sepolia: {
+    libraries: {
+      VaultsWithUSYCLibrary: '0xD655F7f7c73782f4C4cDB86EC7851571E16fA1E2',
+    },
     timelock: '0x74e0a55Ea3Db85F6106FFD69Ef7c9829fd130888',
     pauseManager: '0xbf21e448410BAA6039e73033F530027143c0c280',
     timelockManager: '0xc6Ad27a2446Aa6223512D9FF8A6f3440a20ccd12',
@@ -2010,6 +2032,11 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
         dataFeed: '0x0e0eb6cdad90174f1Db606EC186ddD0B5eD80847',
         aggregator: '0x7811C1Bf5db28630F303267Cc613797EB9A81188',
         token: '0xF55588f2f8CF8E1D9C702D169AF43c15f5c85f12',
+      },
+      radusd: {
+        token: '0xBB882eC4c7358dD59a3267FFB5E5C55fd08c0142',
+        aggregator: '0xf50Da9720f1362400EcC01Ab65DEAE0c4c99d897',
+        dataFeed: '0xf7fcC3E43c2381c0E461d44361b1eE5245604c9B',
       },
       usdt: {
         dataFeed: '0x0e0eb6cdad90174f1Db606EC186ddD0B5eD80847',
@@ -2185,6 +2212,24 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       depositVaultV2: '0xD16EEDB93F29543eF5757BF9DDaC127b814C2CBE',
       redemptionVaultV2: '0xb1F6842433E6a1c8EE233f3B68e49a0f3a10Cc79',
     },
+    radUSD: {
+      token: '0xBB882eC4c7358dD59a3267FFB5E5C55fd08c0142',
+      customFeedDv: '0xdE4536Cc1C6632Fe89920ccC115b4053c4356622',
+      dataFeedDv: '0x5768d8DD4023Dd94BBBcfff2E15f5C70786d4161',
+      customFeedRv: '0xf50Da9720f1362400EcC01Ab65DEAE0c4c99d897',
+      dataFeedRv: '0xEC6B5Efb014ecAC37Cec9e70E50216cD68eD6423',
+      depositVaultV2: '0x9B56de26d503FC7892d662B8DcF7569Cb9a235EF',
+      redemptionVaultV2: '0x122f9B6FAde28156F24B192a0daD2f31A43ab223',
+    },
+    radYC: {
+      token: '0xA7eDb03f998bCF9812490822e4E4497990736B95',
+      customFeedDv: '0x45991A42dF76524f43FCb5b228aBBDFAC11189C6',
+      customFeedRv: '0xA460CD61bF3e5d45e3E7954560E8a392aD393198',
+      dataFeedDv: '0xBb2D70fD5c8389AA2fD2feaFd111211355fF3bA7',
+      dataFeedRv: '0xFb5C0C1d36B4E4a14F8fb0B4F868398B5a4D3f9d',
+      depositVaultUsycV2: '0xc577d51dD5012407521F5cadC8E3aD4F1898930d',
+      redemptionVaultUsycV2: '0xB457F528D1D4a050E14231E1382c315E3DF21D22',
+    },
   },
   arbitrumSepolia: {
     paymentTokens: {
@@ -2260,6 +2305,11 @@ export const sanctionListContracts: Partial<Record<number, string>> = {
 
 export const ustbContracts: Partial<Record<number, string>> = {
   [chainIds.main]: '0x43415eB6ff9DB7E26A15b704e7A3eDCe97d31C4e',
+};
+
+export const usycTellerContracts: Partial<Record<number, string>> = {
+  [chainIds.arc]: '0x51A8CE47dC08ba5CD19c7aa84EA6fD6664f60f9b',
+  [chainIds.sepolia]: '0x1B1297255748683a83b72986A86d2F6eAf62Bb0D',
 };
 
 /**

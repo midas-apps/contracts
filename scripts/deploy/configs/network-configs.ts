@@ -17,7 +17,7 @@ export const networkDeploymentConfigs: NetworkDeploymentConfig = {
       defaultDelay: 0,
     },
     pauseManager: {
-      unpauseDelay: hours(12),
+      unpauseDelay: hours(3),
     },
     timelockManager: {
       maxPendingOperationsPerProposer: 100,
