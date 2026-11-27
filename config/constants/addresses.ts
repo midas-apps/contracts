@@ -130,6 +130,9 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
   MidasAddresses | undefined
 > = {
   arc: {
+    libraries: {
+      VaultsWithUSYCLibrary: '0xd118c610F9fDa18b45840Dc621fA7882B353E7E3',
+    },
     accessControl: '0xD0e01E127cf111AAB7CA56204D5A24532F86461c',
     timelock: '0x450F76E9eC5bB13C4945092c2055cB39789E1A69',
     pauseManager: '0xEcB4DEaAd31e5091B79CCE12a00C578f401d7761',
@@ -172,6 +175,8 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeedRv: '0xD21f13D209163C584083a68672333BD7B43F86F0',
       depositVault: '0x320a9ee478096b68C74337D6fab7e9E6021e94C8',
       redemptionVaultSwapper: '0x7A483d116c7b2178101a1C9abc71CA39221194Ba',
+      depositVaultUsycV2: '0x9a44Db44933F4c4DB547559829c44289c4e67097',
+      redemptionVaultUsycV2: '0xc3c16e148A33b47eeF995198A976e69bA03fbD8E',
     },
   },
   main: {

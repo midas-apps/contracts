@@ -3,12 +3,22 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import fs from 'fs';
 import path from 'path';
 
-const logToFile = (hre: HardhatRuntimeEnvironment, message: string) => {
-  const logsFolderPath = hre.logger.logsFolderPath;
+export const getLogFilePath = (hre: HardhatRuntimeEnvironment) =>
+  path.resolve(hre.logger.logsFolderPath, `log-${hre.contextId}.log`);
 
-  const logFilePath = path.resolve(logsFolderPath, `log-${hre.contextId}.log`);
+/** Appends `message` to the log file of the current run, not to stdout */
+export const logToFile = (hre: HardhatRuntimeEnvironment, message: string) => {
+  fs.appendFileSync(getLogFilePath(hre), message + '\n');
+};
 
-  fs.appendFileSync(logFilePath, message + '\n');
+/** Prints the log file of the current run, if anything was logged to it */
+export const printLogFilePath = (hre: HardhatRuntimeEnvironment) => {
+  if (!hre.logger?.logToFile) return;
+
+  const logFilePath = getLogFilePath(hre);
+  if (!fs.existsSync(logFilePath)) return;
+
+  console.log(`\nLogs: ${path.relative(process.cwd(), logFilePath)}`);
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

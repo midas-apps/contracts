@@ -109,8 +109,6 @@ export const grantAllProductRoles = async (
   const tokenManagerRoles = [
     allRoles.common.blacklistedOperator,
     allRoles.common.greenlistedOperator,
-    tokenRoles.burner,
-    tokenRoles.minter,
     tokenRoles.tokenManager,
   ];
 

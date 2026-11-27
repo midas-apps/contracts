@@ -4,6 +4,7 @@ import {
   HardhatRuntimeEnvironment,
 } from 'hardhat/types';
 
+import fs from 'node:fs';
 import path from 'node:path';
 
 import {
@@ -15,6 +16,7 @@ import {
 
 import { ENV, chainIds, extendWithContext, rpcUrls } from '../../config';
 import { Network } from '../../config';
+import { getLogFilePath, printLogFilePath } from '../../helpers/logger';
 import { isMTokenName, isPaymentTokenName } from '../../helpers/utils';
 import {
   deploymentConfigNames,
@@ -38,6 +40,10 @@ export const withGlobalRunScriptParams = (task: ConfigurableTaskDefinition) => {
       task.addParam(param.name, param.description, param.defaultValue);
     }
   });
+  task.addFlag(
+    'calldata',
+    'Print from / to / calldata of the txs instead of sending them',
+  );
   return task;
 };
 
@@ -135,6 +141,13 @@ export const runScript = async (
     hre.addressBookKeys = keys.split(',').map((k: string) => k.trim());
   }
 
+  if (taskArgs.calldata) {
+    hre.calldata = { txs: [] };
+    // the printed txs are copied from the log by `deploy:format-calldata`
+    hre.logger.logToFile = true;
+    fs.mkdirSync(hre.logger.logsFolderPath, { recursive: true });
+  }
+
   // ad-hoc `runscript` has no declared params, so vault version is optional
   const hydrateParams = scriptParams.length
     ? scriptParams
@@ -151,5 +164,16 @@ export const runScript = async (
 
   const params = scriptParams.map((param) => param().parse(hre, taskArgs));
 
-  await run(hre, ...params);
+  try {
+    await run(hre, ...params);
+
+    if (hre.calldata) {
+      const logPath = path.relative(process.cwd(), getLogFilePath(hre));
+      console.log(
+        `\nCalldata mode: ${hre.calldata.txs.length} tx(s) printed, nothing sent. Copy them with:\n\nyarn deploy:format-calldata ${logPath}`,
+      );
+    }
+  } finally {
+    printLogFilePath(hre);
+  }
 };

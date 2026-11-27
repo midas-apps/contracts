@@ -8,6 +8,7 @@ import {
   PaymentTokenName,
   Network as MidasNetwork,
 } from '../config/types';
+import type { CalldataState, CalldataTx } from '../helpers/calldata';
 import type { DeploymentConfigName } from '../scripts/deploy/configs/deployment-profiles';
 
 import 'hardhat/types/runtime';
@@ -20,7 +21,8 @@ type CustomSignerTransaction = {
 
 type CustomSignerResult =
   | { type: 'hardhatSigner'; tx: TransactionResponse }
-  | { type: 'customSigner'; payload: unknown };
+  | { type: 'customSigner'; payload: unknown }
+  | { type: 'calldataSigner'; payload: CalldataTx };
 
 declare module 'hardhat/types/runtime' {
   export interface HardhatRuntimeEnvironment {
@@ -40,6 +42,8 @@ declare module 'hardhat/types/runtime' {
      */
     vaultVersion?: VaultVersion;
     addressBookKeys?: string[];
+    /** `--calldata`: txs are printed instead of being sent */
+    calldata?: CalldataState;
     logger: {
       // default: false
       logToFile: boolean;
@@ -48,7 +52,7 @@ declare module 'hardhat/types/runtime' {
     };
     contextId: string;
     getCustomSigner: () => Promise<{
-      type: 'hardhatSigner' | 'customSigner';
+      type: 'hardhatSigner' | 'customSigner' | 'calldataSigner';
       getWeb3Provider: (params: { action: string }) => Promise<EIP1193Provider>;
       getWalletAddress: (
         action?: string,

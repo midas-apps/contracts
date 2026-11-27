@@ -4,6 +4,7 @@ import { EIP1193Provider, HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import path from 'path';
 
+import { withCalldataSigner } from '../../helpers/calldata';
 import { initializeLogger } from '../../helpers/logger';
 import {
   DataFeedAddresses,
@@ -186,6 +187,12 @@ const extendWithCustomSigner = (hre: HardhatRuntimeEnvironment) => {
       };
     };
   }
+
+  const getSigner = hre.getCustomSigner;
+  hre.getCustomSigner = async () => {
+    const signer = await getSigner();
+    return hre.calldata ? withCalldataSigner(hre, signer) : signer;
+  };
 };
 
 export const extendWithLogger = (hre: HardhatRuntimeEnvironment) => {

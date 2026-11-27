@@ -79,7 +79,7 @@ const withHardhatEthCalls = (
 export const getDeployer = async (hre: HardhatRuntimeEnvironment) => {
   const customSigner = await hre.getCustomSigner();
 
-  if (customSigner.type === 'customSigner') {
+  if (customSigner.type !== 'hardhatSigner') {
     const customProvider = await customSigner.getWeb3Provider({
       action: 'deployer',
     });
@@ -503,6 +503,10 @@ const sendAndWaitForCustomTxSignDirect = async (
         chainId: hreNetwork.network.config.chainId,
         idempotenceId: txSignMetadata?.idempotenceId ?? hreNetwork.contextId,
       });
+
+  if (res.type === 'calldataSigner') {
+    return `calldata #${res.payload.index}`;
+  }
 
   let resToReturn: unknown;
 
