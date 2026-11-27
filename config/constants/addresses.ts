@@ -166,6 +166,8 @@ export const midasAddressesPerNetwork: ConfigPerNetwork<
       dataFeedRv: '0x440630B3Fd31AedE0aa08F9A2B4C73022ed43046',
       depositVault: '0x898555B66FE541023A45718500FD6A9F412a4168',
       redemptionVaultSwapper: '0x666D13b7B4f428439a1ca7d403B84C0397AD2d52',
+      depositVaultV2: '0xABEA6b56959de59Da516601366D658837BB0d065',
+      redemptionVaultV2: '0x3c94428284F302027aa60640d80DB6bAe543DcdC',
     },
     radYC: {
       token: '0x7F36b7e65F2BAc2C3B13EABAe708d0fe373a4312',
